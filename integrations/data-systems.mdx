@@ -1,0 +1,213 @@
+---
+title: "Connect Data Systems and Databases to Progress Pilot"
+sidebarTitle: "Data Systems"
+description: "Pull structured data from BigQuery, PostgreSQL, Google Sheets, and other sources into Progress Pilot to power AI-generated reports and operational insights."
+---
+
+Progress Pilot can generate meaningful operational summaries from meeting transcripts alone, but connecting your data systems transforms the agent from a meeting intelligence tool into a full operational co-pilot. When the agent can query your task tables, pull KPI metrics from your data warehouse, or read project status from a live spreadsheet, it produces reports grounded in your actual numbers — not just what people said in meetings. This page covers every supported data source, how to configure each connection securely, and how to control exactly what data the agent can access.
+
+## Why Connect Data Systems
+
+Connecting structured data sources unlocks a qualitatively different class of capabilities:
+
+- **Data-backed reports** — Weekly ops reports include real KPI trends, not just narrative summaries. Instead of "the team discussed performance this week," you get "average task completion time dropped from 8.2 to 6.4 days, with the infrastructure team leading the improvement."
+- **Proactive anomaly detection** — Progress Pilot can monitor query results over time and alert you when a metric crosses a threshold, a table stops being updated, or an unusual pattern emerges.
+- **Cross-source synthesis** — The agent can correlate data across sources: meeting notes describe a new initiative, your Jira data shows the related tickets, and your BigQuery tables provide the supporting usage metrics — all synthesized into a single briefing.
+- **Automated KPI tracking** — Configure recurring queries that run on a schedule. Progress Pilot executes them, formats the results, and includes the output in your regular reports without manual intervention.
+
+<Warning>
+  Only grant Progress Pilot read-level access to your data sources. The agent never needs to write to, modify, or delete data in connected databases or spreadsheets. Granting write permissions creates unnecessary risk. All supported connection methods below are configured with read-only access as the default and recommended posture.
+</Warning>
+
+## Supported Data Systems
+
+| System | Connection Method | Status | Read-Only Enforced |
+|--------|------------------|--------|-------------------|
+| BigQuery | Service Account (JSON key) | GA | Configurable at role level |
+| PostgreSQL | Connection String | Beta | Enforced by `pg_read_only` role |
+| MySQL | Connection String | Beta | Enforced by `SELECT` grants only |
+| Google Sheets | OAuth 2.0 (read-only scope) | GA | Yes — read-only scope only |
+| Snowflake | Service Account + Warehouse | Beta | Configurable at role level |
+
+---
+
+## BigQuery
+
+BigQuery is the primary data warehouse integration for Progress Pilot customers on Google Cloud. The agent uses a dedicated service account to execute queries against your datasets — no user credentials are ever stored.
+
+### What You Need
+
+- A Google Cloud project with the BigQuery API enabled
+- A service account with the **BigQuery Data Viewer** role (and optionally **BigQuery Job User** to allow query execution)
+- A downloaded JSON key file for the service account
+
+### Connecting BigQuery
+
+<Steps>
+  <Step title="Create a Service Account">
+    Open the [Google Cloud Console](https://console.cloud.google.com) and navigate to **IAM & Admin → Service Accounts**. Click **Create Service Account**, give it a descriptive name (e.g., `progresspilot-reader`), and click **Create and Continue**.
+  </Step>
+  <Step title="Grant the BigQuery Data Viewer Role">
+    In the **Grant this service account access to project** step, click **Select a role** and choose **BigQuery → BigQuery Data Viewer**. If you also want the agent to run queries (rather than just read table data via the API), add the **BigQuery → BigQuery Job User** role as well. Click **Continue**, then **Done**.
+  </Step>
+  <Step title="Download the JSON Key">
+    On the Service Accounts list, click the service account you just created. Go to the **Keys** tab, click **Add Key → Create new key**, select **JSON**, and click **Create**. A JSON credentials file will download to your machine. Store this file securely — treat it like a password.
+  </Step>
+  <Step title="Upload Credentials to Progress Pilot">
+    In Progress Pilot, go to **Settings → Integrations → BigQuery**. Click **Upload Service Account Key** and select the JSON file you downloaded. Progress Pilot validates the credentials and displays the connected project ID.
+  </Step>
+  <Step title="Configure Dataset and Table Access">
+    After uploading credentials, configure the **Dataset Access Whitelist** to restrict which datasets and tables the agent is permitted to query. Enter dataset names (e.g., `operations`, `product_metrics`) or fully qualified table names (e.g., `myproject.operations.tasks`). The agent will refuse to execute any query that references a table outside this whitelist, even if the service account technically has access to it.
+  </Step>
+</Steps>
+
+### Sample Agent Query
+
+When generating an operational report, Progress Pilot constructs and executes queries like the following to pull structured metrics into the report:
+
+```sql
+SELECT
+  team,
+  AVG(task_completion_days) AS avg_days,
+  COUNT(*) AS tasks_completed,
+  COUNTIF(task_completion_days > 14) AS overdue_tasks
+FROM `myproject.operations.tasks`
+WHERE
+  created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+  AND status = 'completed'
+GROUP BY team
+ORDER BY avg_days DESC
+```
+
+The results of this query are passed directly into the report-generation prompt alongside meeting summaries and project data, enabling Progress Pilot to produce statements like: *"The design team had the highest average task completion time at 11.2 days, up from 8.6 days in the prior period — a trend consistent with the capacity concerns raised in the Jan 14 design sync."*
+
+<Info>
+  Progress Pilot never stores raw query results permanently. Query outputs are processed in memory during report generation and are not retained after the report is written. If you need an audit log of what queries were executed, you can enable **BigQuery audit logs** in Google Cloud under **Logging → Log Router** — every query the service account runs will appear there.
+</Info>
+
+---
+
+## PostgreSQL
+
+The PostgreSQL integration uses a standard connection string and is currently in Beta. It supports PostgreSQL 12 and above, including managed instances on AWS RDS, Google Cloud SQL, Azure Database for PostgreSQL, and Supabase.
+
+### Connection String Format
+
+Provide your connection string in the following format in **Settings → Integrations → PostgreSQL**:
+
+```text
+postgresql://username:password@hostname:5432/database_name?sslmode=require
+```
+
+**Parameter reference:**
+
+| Parameter | Description |
+|-----------|-------------|
+| `username` | A database user with `SELECT`-only privileges on the permitted schemas |
+| `password` | The database user's password (stored encrypted at rest) |
+| `hostname` | Your database host (IP or DNS) |
+| `5432` | Default PostgreSQL port — change if your instance uses a non-standard port |
+| `database_name` | The specific database to connect to |
+| `sslmode=require` | SSL is required — connections without SSL will be rejected |
+
+**SSL is mandatory for all PostgreSQL connections.** Progress Pilot will not connect to a PostgreSQL instance that does not support SSL. If your managed database instance does not have SSL enabled, enable it before attempting to connect.
+
+We recommend creating a dedicated read-only database user for Progress Pilot:
+
+```sql
+-- Create a read-only role for Progress Pilot
+CREATE ROLE progresspilot_reader WITH LOGIN PASSWORD 'your-strong-password';
+
+-- Grant SELECT on the schemas the agent needs to query
+GRANT USAGE ON SCHEMA operations TO progresspilot_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA operations TO progresspilot_reader;
+
+-- Ensure future tables in the schema are also readable
+ALTER DEFAULT PRIVILEGES IN SCHEMA operations
+  GRANT SELECT ON TABLES TO progresspilot_reader;
+```
+
+---
+
+## Google Sheets
+
+The Google Sheets integration uses the same Google OAuth connection as Google Workspace but requests only a read-only scope. If you have already connected Google Workspace, you can extend those credentials to include Sheets access in **Settings → Integrations → Google Sheets** with one click.
+
+### Connecting a Sheet
+
+To make a specific sheet available to Progress Pilot:
+
+1. Open the Google Sheet you want to connect.
+2. Copy the **Sheet ID** from the URL: `https://docs.google.com/spreadsheets/d/**{SHEET_ID}**/edit`
+3. In **Settings → Integrations → Google Sheets → Add Sheet**, paste the Sheet ID.
+4. Enter the **tab name** (the name shown on the sheet's bottom tab) that contains the data you want the agent to read.
+5. Optionally, define a **header row number** if your data does not start in row 1.
+
+Progress Pilot treats the first row of the specified range as column headers and makes those column names available as query fields in reports and KPI configurations.
+
+<Note>
+  The agent accesses Google Sheets in real time when generating reports — it reads the current state of the sheet at the moment the report runs, not a cached snapshot. If a sheet is updated between report runs, the next report will reflect the latest data automatically.
+</Note>
+
+---
+
+## Snowflake (Beta)
+
+Snowflake support is currently in Beta. The integration uses a dedicated Snowflake service account and a specified virtual warehouse for query execution. To connect Snowflake, go to **Settings → Integrations → Snowflake** and provide:
+
+| Field | Description |
+|-------|-------------|
+| Account identifier | Your Snowflake account identifier (e.g., `xy12345.us-east-1`) |
+| Username | A Snowflake user with a read-only role applied |
+| Password | The user's Snowflake password |
+| Warehouse | The virtual warehouse to use for query execution (use a small or X-Small warehouse to manage cost) |
+| Database | The Snowflake database to connect to |
+| Schema | The default schema (additional schemas can be whitelisted after connecting) |
+| Role | The Snowflake role to assume — should be a custom read-only role |
+
+During the Beta period, Snowflake connections do not yet support key-pair authentication or OAuth. These are planned for the GA release.
+
+---
+
+## Data Access Controls
+
+Progress Pilot provides two layers of data access controls beyond what you configure in the source database itself.
+
+### Column-Level Masking
+
+In **Settings → Integrations → [Data Source] → Access Controls**, you can define a **column mask list** — a set of column names that the agent is never permitted to include in query results or report outputs, even if the underlying query returns them. This is useful for personally identifiable information (PII) columns, salary fields, or other sensitive data that should not appear in AI-generated outputs.
+
+```json
+{
+  "masked_columns": [
+    "employee_email",
+    "salary",
+    "ssn",
+    "date_of_birth",
+    "home_address"
+  ]
+}
+```
+
+Any column whose name matches a masked column — across any table in the connected data source — will have its values replaced with `[REDACTED]` in query results before being passed to the AI model.
+
+### Row-Level Filters (Enterprise)
+
+Enterprise plan customers can configure **row-level filters** that are automatically appended to every query the agent executes against a data source. Row-level filters enforce data boundaries — for example, restricting the agent to only read rows belonging to a specific region, business unit, or date range — without requiring you to create separate database views or roles for each constraint.
+
+```json
+{
+  "row_filters": [
+    {
+      "table": "operations.tasks",
+      "filter": "region = 'EMEA'"
+    },
+    {
+      "table": "product_metrics.events",
+      "filter": "created_at >= '2024-01-01'"
+    }
+  ]
+}
+```
+
+Row-level filters are applied server-side by Progress Pilot before the query reaches your database — they are injected as additional `WHERE` clauses and cannot be bypassed through prompt manipulation or slash commands.

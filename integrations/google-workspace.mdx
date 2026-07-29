@@ -1,0 +1,81 @@
+---
+title: "Integrate Progress Pilot with Google Workspace"
+sidebarTitle: "Google Workspace"
+description: "Connect Progress Pilot to Google Calendar, Meet, Docs, and Gmail to automate meeting notes, report delivery, and cross-team document workflows."
+---
+
+Google Workspace is the operational backbone of most teams Progress Pilot serves, and the integration reflects that centrality. Once connected, Progress Pilot reads your Calendar to anticipate upcoming meetings, auto-joins Google Meet sessions to capture transcripts and action items, creates polished Google Docs for reports and summaries, and sends Gmail notifications to keep stakeholders informed — all without you having to copy, paste, or summarize anything manually.
+
+## What the Integration Enables
+
+Connecting Google Workspace unlocks a core set of automation capabilities that underpin nearly every other Progress Pilot feature:
+
+- **Auto-join Google Meet** — Progress Pilot joins scheduled or ad-hoc Meet calls as a silent participant, captures the full transcript, identifies speakers, and generates structured meeting summaries immediately after the call ends.
+- **Calendar awareness** — The agent reads your Google Calendar to understand your meeting schedule, detect scheduling conflicts, identify recurring syncs, and proactively prepare briefing documents before high-priority meetings.
+- **Google Docs report creation** — Weekly reports, meeting summaries, OKR updates, and operational analyses are written directly to Google Docs in your Drive. Documents are formatted with headings, tables, and action item lists — ready to share without editing.
+- **Gmail notifications** — Progress Pilot can send stakeholder update emails, meeting summary digests, and report delivery notifications directly from your connected Google account, preserving your sender identity and threading behavior.
+
+## Required OAuth Scopes
+
+Progress Pilot requests only the permissions necessary for each capability. The table below describes every scope requested during the OAuth consent flow:
+
+| Scope | Purpose |
+|-------|---------|
+| `https://www.googleapis.com/auth/calendar.readonly` | Read upcoming meetings, event details, and attendee lists from Google Calendar |
+| `https://www.googleapis.com/auth/meetings.space.readonly` | Access Google Meet recording metadata and transcripts |
+| `https://www.googleapis.com/auth/documents` | Create and write Google Docs for reports, summaries, and briefings |
+| `https://www.googleapis.com/auth/drive.file` | Save created Docs to a designated Google Drive folder |
+| `https://www.googleapis.com/auth/gmail.send` | Send notification emails and report digests from your Gmail account |
+
+You can grant a subset of these scopes if you only need certain capabilities. For example, if you do not want Progress Pilot to send Gmail notifications, you can skip the `gmail.send` scope — report delivery will fall back to in-app notifications and Slack if connected.
+
+<Warning>
+  Deploying Progress Pilot across an entire Google Workspace organization (rather than individual user accounts) requires an admin to approve the OAuth application in the **Google Admin Console** under **Security → API Controls → App Access Control**. Individual users connecting their personal accounts do not require admin approval.
+</Warning>
+
+## Connecting Google Workspace
+
+<Steps>
+  <Step title="Open Integrations Settings">
+    In Progress Pilot, navigate to **Settings → Integrations → Google Workspace**. You will see a summary of what the integration enables and the list of permissions that will be requested.
+  </Step>
+  <Step title="Click Connect Google Account">
+    Click the **Connect Google Account** button. You will be redirected to Google's OAuth consent screen. Make sure to sign in with the Google account whose Calendar and Meet activity you want Progress Pilot to monitor — typically your primary work account.
+  </Step>
+  <Step title="Review and Grant Permissions">
+    On the Google consent screen, review the list of requested permissions. Check the box next to each scope you want to enable, then click **Allow**. You will be redirected back to Progress Pilot automatically once authorization is complete.
+  </Step>
+  <Step title="Set a Default Google Drive Folder (Optional)">
+    After connecting, you can designate a specific Google Drive folder as the default destination for all Docs created by Progress Pilot. Click **Set Drive Folder**, navigate to or create the folder in the Drive picker, and click **Select**. If no folder is set, Docs are saved to the root of your Drive.
+  </Step>
+  <Step title="Test the Connection">
+    Click **Test Connection** to verify that Progress Pilot can successfully read your Calendar and access Drive. The test will display the number of upcoming meetings detected and confirm write access to your selected Drive folder. A green checkmark confirms everything is working correctly.
+  </Step>
+</Steps>
+
+## Auto-Join Settings
+
+By default, Progress Pilot joins every Google Meet link found in your Calendar events. You can adjust this behavior in **Settings → Integrations → Google Workspace → Auto-Join** to match how your team operates:
+
+**Join all meetings** — Progress Pilot attends every Google Meet on your calendar, including meetings organized by others where you are an attendee. This is the recommended setting for operations leads and executives who want comprehensive meeting intelligence.
+
+**Only meetings I organize** — Progress Pilot joins only meetings where you are the organizer. This is useful for team leads who want AI notes for their own syncs without capturing every all-hands or external meeting they attend.
+
+**Keyword filter** — Progress Pilot joins meetings whose calendar event title or description matches one or more keywords you define. For example, entering `standup, sync, review, planning` means the agent attends only meetings with those terms in the event name. Keywords are case-insensitive and support partial matching.
+
+**Invited participants only** — If your organization adds a dedicated Progress Pilot bot calendar account, you can configure the agent to join only meetings to which that bot account is explicitly invited. This gives individual meeting organizers direct control over when AI notes are captured.
+
+<Info>
+  Auto-join works by detecting the Google Meet link embedded in a Calendar event 5 minutes before the meeting starts. If a Meet link is added to an event after Progress Pilot's pre-meeting scan, the agent will not auto-join for that instance — you can trigger a manual join from the Progress Pilot dashboard or Slack using `/pp join`.
+</Info>
+
+## Google Docs Report Delivery
+
+When Progress Pilot generates a report, summary, or briefing, it creates a new Google Doc in your designated Drive folder. Each document follows a consistent structure:
+
+- **Document title** — Named using the output type and date (e.g., `Weekly Ops Report — Week of Jan 13, 2025` or `Meeting Summary: Q1 Planning Sync`).
+- **Formatting** — Documents use Heading 1 for sections, Heading 2 for subsections, bulleted lists for action items, and tables for structured data like KPI comparisons.
+- **Sharing** — By default, created Docs are visible only to the connected Google account. You can configure automatic sharing in **Settings → Integrations → Google Workspace → Doc Sharing**, where you can specify additional recipients or a Google Group to share each new document with upon creation.
+- **Version history** — Because these are native Google Docs, full revision history is available. If Progress Pilot updates a recurring report (e.g., an ongoing project status doc), each update is captured as a new revision rather than overwriting previous content.
+
+You can also configure Progress Pilot to append content to an existing Google Doc instead of creating a new one — useful for running log documents like a project journal or a weekly ops digest that accumulates entries over time. Configure this in **Settings → Integrations → Google Workspace → Report Delivery → Append Mode**.

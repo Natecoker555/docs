@@ -1,0 +1,177 @@
+---
+title: "Security Controls and Access Management in Progress Pilot"
+sidebarTitle: "Security Controls"
+description: "Configure API key management, SSO, IP allowlisting, two-factor authentication, and audit log access to secure your Progress Pilot workspace."
+---
+
+Progress Pilot is built for enterprise environments where data sensitivity, access control, and compliance are non-negotiable. Every workspace ships with a layered security model: API keys with granular scoping, mandatory two-factor authentication enforcement, SAML 2.0 single sign-on for federated identity management, IP allowlisting to restrict access by network, and a comprehensive audit log that captures every meaningful agent and user action. This page walks you through configuring each of these controls so your workspace meets your organization's security requirements.
+
+## API Key Management
+
+API keys authenticate programmatic access to the Progress Pilot API — for agent integrations, CI/CD pipelines, and third-party tooling.
+
+### Creating an API Key
+
+Navigate to **Settings → API Keys → Create New**. Give the key a descriptive name (e.g. `jira-integration-prod`), select its scope, and click **Generate Key**. Copy the key immediately — for security reasons, the full key value is only shown once at creation time.
+
+### Key Types
+
+| Key Prefix | Environment | Use Case |
+|---|---|---|
+| `ppk_live_...` | Production | Live integrations, real agent workflows, production data |
+| `ppk_test_...` | Test / Sandbox | Development, CI/CD pipelines, integration testing |
+
+Test keys operate against sandboxed data and never trigger real agent actions or external integration calls. Always use test keys in non-production environments.
+
+### Key Scopes and Permissions
+
+When creating a key, you choose between two access scopes:
+
+| Permission | Read-Only | Full Access |
+|---|---|---|
+| Read meetings and summaries | ✅ | ✅ |
+| Read reports and action items | ✅ | ✅ |
+| Read workspace settings | ✅ | ✅ |
+| Create and update action items | ❌ | ✅ |
+| Trigger agent tasks | ❌ | ✅ |
+| Modify workspace settings | ❌ | ✅ |
+| Create and revoke API keys | ❌ | ✅ |
+
+Follow the principle of least privilege: issue read-only keys to any integration that only needs to consume data, and reserve full-access keys for systems that must write back or trigger agent workflows.
+
+### Rotating and Revoking Keys
+
+To rotate a key, open **Settings → API Keys**, find the key you want to replace, and click **Rotate**. Progress Pilot generates a new key value while keeping the old key active for a configurable grace period (default: 24 hours) so you can update dependent systems without downtime. Once you've updated all consumers, click **Revoke Old Key** to immediately invalidate it.
+
+To permanently revoke a key without rotation, click **Revoke** on any key in the list. Revocation is immediate and irreversible.
+
+## Two-Factor Authentication (2FA)
+
+Two-factor authentication adds a second verification step to every login, protecting your workspace even if a password is compromised.
+
+### Enabling 2FA for Your Account
+
+<Steps>
+  <Step title="Open Account Security Settings">
+    Click your avatar in the top-right corner and go to **Account → Security**.
+  </Step>
+  <Step title="Choose an Authentication Method">
+    Select **Authenticator App (TOTP)** for the strongest security, or **SMS** as a fallback option. We recommend TOTP via an app like Google Authenticator, Authy, or 1Password.
+  </Step>
+  <Step title="Scan the QR Code">
+    Open your authenticator app, tap **Add Account**, and scan the QR code displayed in the dashboard.
+  </Step>
+  <Step title="Verify and Save">
+    Enter the six-digit code from your app to confirm setup. 2FA is now active on your account.
+  </Step>
+</Steps>
+
+### Enforcing 2FA Org-Wide
+
+Workspace admins can require all members to enroll in 2FA before accessing the workspace.
+
+Navigate to **Settings → Security → Authentication** and toggle **Require 2FA for all members**. Users who have not yet enrolled will be prompted to complete 2FA setup on their next login and will be unable to access the workspace until they do.
+
+<Note>
+Org-wide 2FA enforcement is available on all paid plans. Users added to the workspace after enforcement is enabled are required to enroll during their first login.
+</Note>
+
+### Supported 2FA Methods
+
+| Method | Description |
+|---|---|
+| Authenticator App (TOTP) | Time-based one-time passwords via any TOTP-compatible app. Recommended. |
+| SMS | One-time codes sent via text message. Available as a fallback if TOTP setup is not feasible. |
+
+## Single Sign-On (SSO)
+
+SSO allows your team to authenticate into Progress Pilot using your organization's existing identity provider (IdP), eliminating the need to manage separate passwords.
+
+<Note>
+SSO via SAML 2.0 is available on the **Enterprise plan** only. To upgrade, contact your account executive or visit the billing page in your dashboard.
+</Note>
+
+### SAML 2.0 Setup
+
+Progress Pilot supports SAML 2.0 for SSO. To begin setup, navigate to **Settings → Security → Single Sign-On** and click **Configure SAML**.
+
+You'll be given a set of service provider (SP) values to enter into your IdP:
+
+| Field | Value |
+|---|---|
+| **SP Entity ID** | `https://auth.progresspilot.ai/saml/entity` |
+| **ACS URL** | `https://auth.progresspilot.ai/saml/acs` |
+| **Name ID Format** | `EmailAddress` |
+
+After configuring your IdP, paste your IdP metadata XML (or the metadata URL) into the **IdP Metadata** field in Progress Pilot and click **Save**.
+
+### Supported Identity Providers
+
+<Tabs>
+  <Tab title="Okta">
+    In the Okta admin console, create a new SAML 2.0 application. Use the SP Entity ID and ACS URL from your Progress Pilot SSO settings page. Set the **Name ID** attribute to the user's email address. Download the IdP metadata XML from Okta and paste it into the Progress Pilot SSO configuration panel.
+  </Tab>
+  <Tab title="Azure AD">
+    In the Azure portal, go to **Enterprise Applications → New Application → Create your own application**. Choose **Integrate any other application you don't find in the gallery**. Set up SAML by entering the Progress Pilot SP Entity ID as the Identifier and the ACS URL as the Reply URL. Download the Federation Metadata XML and upload it to Progress Pilot.
+  </Tab>
+  <Tab title="Google Workspace">
+    In the Google Admin console, navigate to **Apps → Web and Mobile Apps → Add App → Add Custom SAML App**. Enter your SP Entity ID and ACS URL. Set the Name ID to the user's **Primary Email**. Download the IdP metadata and paste it into Progress Pilot.
+  </Tab>
+</Tabs>
+
+### Just-in-Time Provisioning
+
+When just-in-time (JIT) provisioning is enabled, new users are automatically created in your Progress Pilot workspace the first time they log in via SSO — no pre-invitation required. You can enable JIT provisioning in **Settings → Security → Single Sign-On → Advanced Options** and configure the default role assigned to JIT-provisioned users.
+
+## IP Allowlisting
+
+IP allowlisting restricts Progress Pilot access to traffic originating from specified IP ranges, preventing access from unauthorized networks.
+
+Navigate to **Settings → Security → IP Allowlist** and click **Add IP Range**. Enter ranges in CIDR notation:
+
+```text
+192.168.1.0/24
+10.0.0.0/8
+203.0.113.42/32
+```
+
+You can add multiple ranges — one per line. Ranges apply to all workspace members. Traffic from any IP address not covered by your allowlist will receive a `403 Forbidden` response.
+
+<Warning>
+**Always test your IP allowlist before enforcing it.** If you add ranges that exclude your own current IP address or your team's office network, you will lock yourself out of the workspace. To be safe: add your IP ranges, verify that your current IP falls within at least one of them, then enable enforcement. Keep the IP allowlist panel open in a separate browser tab during testing so you can make adjustments before the first logout.
+</Warning>
+
+## Audit Logs
+
+Progress Pilot maintains a tamper-evident audit log of all significant actions taken in your workspace, giving you a full trail for security investigations and compliance reviews.
+
+### What Is Logged
+
+| Category | Examples |
+|---|---|
+| Agent actions | Task execution, meeting joins, report generation, action item creation |
+| User logins | Successful and failed login attempts, SSO events, 2FA verifications |
+| Settings changes | Any modification to workspace, team, or security settings |
+| Data access | Report views, summary exports, API key usage |
+| Admin actions | User invitations, role changes, key revocations |
+
+### Accessing Audit Logs in the Dashboard
+
+Navigate to **Settings → Security → Audit Logs**. You can filter the log by date range, event category, user, and event type. Each log entry shows the actor, the action taken, the affected resource, the source IP address, and an ISO 8601 timestamp.
+
+### Exporting Audit Logs
+
+To export a filtered view of the audit log, click **Export** and choose your format:
+
+| Format | Use Case |
+|---|---|
+| CSV | Spreadsheet analysis, manual review |
+| JSON | Programmatic processing, SIEM ingestion |
+
+Exports are scoped to your current filter selection. For large date ranges, exports are processed asynchronously and delivered to your email when ready.
+
+### Streaming Audit Logs to a SIEM
+
+For real-time ingestion into a Security Information and Event Management (SIEM) system, configure a webhook stream under **Settings → Security → Audit Logs → Stream to SIEM**.
+
+Enter your SIEM's webhook ingestion endpoint and select the event categories you want to stream. Progress Pilot will POST each audit event as a structured JSON payload to your endpoint within seconds of the event occurring. HMAC-SHA256 request signing is available to verify payload authenticity on your SIEM side.

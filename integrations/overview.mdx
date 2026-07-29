@@ -1,0 +1,124 @@
+---
+title: "Connect Progress Pilot to Your Tools and Systems"
+sidebarTitle: "Overview"
+description: "Progress Pilot integrates with 30+ tools including Google Workspace, Slack, Jira, Zoom, and databases. Connect your stack to unlock AI-powered operations across every system."
+---
+
+Progress Pilot becomes dramatically more powerful when connected to the tools your team already uses. Rather than asking you to change how you work, Progress Pilot meets your team where it is — reading your calendar, joining your meetings, posting to your Slack channels, and pulling data from your databases to generate the insights and reports that used to take hours to compile manually. Every integration is built on secure, auditable, OAuth-based authentication with scoped permissions you control.
+
+## Integration Categories
+
+<CardGroup cols={2}>
+  <Card title="Google Workspace" icon="google" href="/integrations/google-workspace">
+    Connect Google Calendar, Meet, Docs, and Gmail. Progress Pilot auto-joins meetings, captures summaries, creates Docs reports, and sends Gmail notifications on your behalf.
+  </Card>
+  <Card title="Communication Tools" icon="message" href="/integrations/communication-tools">
+    Route meeting summaries, action items, reports, and alerts to Slack channels, Microsoft Teams, or email recipients — automatically and in real time.
+  </Card>
+  <Card title="Data Systems" icon="database" href="/integrations/data-systems">
+    Pull structured data from BigQuery, PostgreSQL, Google Sheets, and more to power AI-generated reports, KPI dashboards, and operational insights.
+  </Card>
+  <Card title="Project Management" icon="list-check" href="/integrations/communication-tools">
+    Sync tasks, milestones, and blockers from Jira, Asana, and Linear. Progress Pilot tracks delivery health and surfaces cross-team dependencies automatically.
+  </Card>
+</CardGroup>
+
+## How Integrations Work
+
+Every integration in Progress Pilot follows a consistent security model designed to give you full visibility and control over what the agent can access.
+
+**OAuth 2.0 and API Key authentication** — Most integrations use the OAuth 2.0 authorization code flow. You grant permissions directly through the provider's official consent screen; Progress Pilot never sees or stores your passwords. For tools that use API keys (such as Linear), you generate a scoped token in the provider's settings and paste it into Progress Pilot.
+
+**Scoped permissions** — Progress Pilot only requests the minimum permissions needed to perform its functions. For example, connecting Google Calendar requests read-only calendar access; it does not request the ability to create or delete events unless you explicitly enable scheduling features.
+
+**Revocable at any time** — You can disconnect any integration from **Settings → Integrations** instantly. Revoking access in Progress Pilot also prompts you to revoke the OAuth grant in the connected provider, ensuring no lingering access remains.
+
+**Per-workspace isolation** — Each Progress Pilot workspace maintains its own set of integration credentials. Connections granted in one workspace are never shared with another, even within the same organization.
+
+<Note>
+  All OAuth tokens are encrypted at rest using AES-256 and stored in isolated credential vaults. Tokens are never returned in API responses, never logged, and are only decrypted in memory at the moment they are needed to make an authorized request.
+</Note>
+
+## Integration Status
+
+The table below lists every currently supported integration, its category, how authentication works, and its release status.
+
+| Name | Category | Auth Method | Status |
+|------|----------|-------------|--------|
+| Google Workspace | Productivity | OAuth 2.0 | GA |
+| Slack | Communication | OAuth 2.0 | GA |
+| Zoom | Meetings | OAuth 2.0 | GA |
+| Microsoft Teams | Meetings / Communication | OAuth 2.0 | GA |
+| Jira | Project Management | OAuth 2.0 | GA |
+| Asana | Project Management | OAuth 2.0 | GA |
+| Linear | Project Management | API Key | GA |
+| BigQuery | Data | Service Account | GA |
+| PostgreSQL | Data | Connection String | Beta |
+
+Integrations marked **GA** (Generally Available) are fully supported and covered by Progress Pilot's SLA. Integrations marked **Beta** are stable for production use but may have a reduced feature set or evolving API surface — check the relevant integration page for known limitations.
+
+## Managing Integrations via API
+
+In addition to the Settings UI, you can manage integrations programmatically using the Progress Pilot REST API. This is useful for automated provisioning, infrastructure-as-code workflows, and enterprise onboarding scripts.
+
+**List all connected integrations for a workspace:**
+
+```http
+GET /api/v1/integrations
+Authorization: Bearer <your_api_token>
+```
+
+```json
+{
+  "integrations": [
+    {
+      "id": "int_01hx9k2p3q",
+      "provider": "google_workspace",
+      "status": "connected",
+      "scopes": ["calendar.readonly", "documents", "gmail.send"],
+      "connected_at": "2024-11-14T09:22:11Z",
+      "connected_by": "user_01hx3m7r8t"
+    },
+    {
+      "id": "int_01hx9k4z7w",
+      "provider": "slack",
+      "status": "connected",
+      "scopes": ["channels:write", "chat:write", "commands"],
+      "connected_at": "2024-11-14T09:35:44Z",
+      "connected_by": "user_01hx3m7r8t"
+    }
+  ]
+}
+```
+
+**Initiate a new integration connection:**
+
+```http
+POST /api/v1/integrations/connect
+Authorization: Bearer <your_api_token>
+Content-Type: application/json
+
+{
+  "provider": "jira",
+  "redirect_uri": "https://your-app.example.com/oauth/callback"
+}
+```
+
+```json
+{
+  "authorization_url": "https://auth.atlassian.com/authorize?client_id=...&redirect_uri=...&scope=read:jira-work",
+  "state": "csrf_01hx9kbp2z",
+  "expires_in": 300
+}
+```
+
+Redirect the user to the returned `authorization_url` to complete the OAuth consent flow. The `state` parameter is a CSRF token that Progress Pilot validates when the user is redirected back to your `redirect_uri`.
+
+**Disconnect an integration:**
+
+```http
+DELETE /api/v1/integrations/{integration_id}
+Authorization: Bearer <your_api_token>
+```
+
+A `204 No Content` response confirms the integration has been disconnected and all associated credentials have been purged.

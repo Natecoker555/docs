@@ -1,0 +1,157 @@
+---
+title: "Track and Align Strategic Operational Priorities"
+sidebarTitle: "Strategic Priorities"
+description: "Use Progress Pilot to define OKRs, track progress, surface blockers, and keep every team aligned with your organization's strategic goals."
+---
+
+Strategic goals only drive results when every team understands them, tracks progress against them, and has a mechanism for surfacing blockers before they become failures. Progress Pilot's strategic priorities system connects your organization's OKRs and KPIs directly to the operational data the agent already monitors — meeting outcomes, action item completion, and cross-team workflows — so that priority tracking is continuous, automatic, and grounded in evidence rather than self-reported estimates.
+
+## What Strategic Priorities Include
+
+Progress Pilot supports four types of strategic priorities, each suited to a different planning horizon and measurement approach:
+
+| Type | Description | Typical Owner |
+|---|---|---|
+| **OKR** | Objective and Key Results pairing. The Objective is qualitative; Key Results are measurable outcomes. | Team lead or department head |
+| **KPI** | A single ongoing metric tracked against a target value or threshold. | Operations manager or analyst |
+| **Initiative** | A time-boxed project or program that contributes to one or more OKRs. | Project owner |
+| **Milestone** | A binary, dated checkpoint (achieved or not) within an Initiative. | Initiative owner |
+
+All priority types support team assignments, target dates, and metric definitions. OKRs and Initiatives can be nested: org-level OKRs cascade to team-level OKRs, and Initiatives contain Milestones.
+
+## Creating a Priority
+
+You can create priorities from the dashboard or by posting to the `/v1/priorities` API endpoint. The following payload creates an OKR targeting a 20% reduction in average meeting duration across three teams:
+
+```json
+{
+  "title": "Reduce average meeting time by 20% in Q3",
+  "type": "okr",
+  "owner": "ops-team",
+  "target_date": "2024-09-30",
+  "metrics": [
+    {
+      "name": "Avg meeting duration",
+      "baseline": 52,
+      "target": 42,
+      "unit": "minutes"
+    }
+  ],
+  "teams": ["engineering", "product", "design"]
+}
+```
+
+The `baseline` value anchors the starting point for progress calculation. Progress Pilot computes percentage completion as the proportional movement from `baseline` toward `target` based on current observed values from connected data sources.
+
+To create this priority via the API:
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/priorities \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Reduce average meeting time by 20% in Q3",
+    "type": "okr",
+    "owner": "ops-team",
+    "target_date": "2024-09-30",
+    "metrics": [
+      {
+        "name": "Avg meeting duration",
+        "baseline": 52,
+        "target": 42,
+        "unit": "minutes"
+      }
+    ],
+    "teams": ["engineering", "product", "design"]
+  }'
+```
+
+## Automatic Progress Monitoring
+
+Once a priority is created, Progress Pilot monitors it continuously without requiring manual check-ins. The agent pulls data from three sources to compute real-time progress:
+
+<CardGroup cols={3}>
+  <Card title="Meeting Data" icon="video">
+    Duration, frequency, attendance, and agenda completion metrics from all connected calendar and conferencing integrations are mapped to relevant meeting efficiency OKRs automatically.
+  </Card>
+  <Card title="Reports & Digests" icon="file-lines">
+    Quantitative data surfaced in generated reports — throughput, cycle time, escalation rates — is linked to matching KPI metrics and updates priority progress in real time.
+  </Card>
+  <Card title="Action Item Completion" icon="list-check">
+    Action items tagged with a priority label contribute to Initiative and Milestone completion percentages. The agent tracks open, completed, and overdue items and factors them into risk scoring.
+  </Card>
+</CardGroup>
+
+Progress is recalculated every 24 hours and visualized as a trend line on each priority's detail page. You can also trigger an on-demand recalculation from the dashboard or via `POST /v1/priorities/{id}/refresh`.
+
+## Blocker Detection
+
+Progress Pilot proactively flags priorities that are at risk of missing their target dates. The agent applies a risk model that evaluates:
+
+- **Trend velocity** — whether the current rate of progress is sufficient to reach the target by the deadline
+- **Action item health** — the ratio of overdue to completed action items linked to the priority
+- **Dependency status** — whether any upstream team dependencies required for this priority are blocked or at risk
+- **Historical patterns** — whether this team or priority type has a track record of slipping in comparable periods
+
+When a priority crosses the risk threshold, it is flagged with a **At Risk** or **Off Track** status indicator and triggers an automatic notification to the priority owner. The notification includes a plain-language explanation of the risk signals and suggested remediation steps.
+
+<Warning>
+  Blocker detection relies on data from connected integrations. If a key data source — such as your calendar integration or project management tool — is disconnected or has stale permissions, the agent may not have enough signal to accurately assess risk. Check **Settings → Integrations** to ensure all sources show a healthy sync status.
+</Warning>
+
+## Weekly Priority Digest
+
+Every Monday morning, Progress Pilot delivers a **Weekly Priority Digest** to each priority owner and their workspace admin. The digest includes:
+
+- A status summary for each active priority (`On Track`, `At Risk`, `Off Track`, `Completed`)
+- Week-over-week progress delta for each tracked metric
+- A list of active blockers with their age and assigned owner
+- Recommended next steps for any priority that has degraded since the previous week
+
+You can configure digest recipients, delivery channel (email or Slack), and delivery time in **Settings → Notifications → Priority Digest**.
+
+## Priority Alignment Across Teams
+
+Org-level strategic goals only create value when they are translated into team-level actions. Progress Pilot supports a cascading hierarchy that connects executive priorities to team execution:
+
+```
+Org OKR: Improve operational efficiency by 25% in FY2025
+  └── Team OKR (Engineering): Reduce deployment cycle time by 30% in Q3
+        └── Initiative: Implement CI/CD pipeline improvements
+              ├── Milestone: Pipeline audit complete by Aug 1
+              └── Milestone: Staging environment automated by Aug 31
+  └── Team OKR (Product): Reduce time-to-spec by 25% in Q3
+        └── Initiative: Streamline requirements process
+```
+
+To cascade a priority, open the parent priority in the dashboard, click **Add Child Priority**, and configure the child's metrics, owner, and teams. Child priorities roll their progress upward — when all team OKRs under an org-level OKR reach 100%, the parent completes automatically.
+
+Team leads can view only the priorities assigned to their teams. Executives and Admins see the full hierarchy with drill-down capability into any team's progress.
+
+## Setting Up Your First OKR
+
+<Steps>
+  <Step title="Navigate to Priorities in the Dashboard">
+    From the main navigation, click **Priorities**. This opens the Priorities Board, which displays all active priorities organized by status. If this is your first time, the board will prompt you to create your first priority.
+  </Step>
+  <Step title="Click 'New Priority' and Fill In the Core Fields">
+    Click the **New Priority** button in the top right corner of the board. In the creation form, provide:
+    - **Title** — a clear, outcome-oriented statement of what you want to achieve
+    - **Type** — select `OKR` for a high-level strategic objective
+    - **Owner** — the team or individual accountable for delivery
+    - **Target Date** — the date by which you want to achieve the objective
+  </Step>
+  <Step title="Add Metrics with Baseline and Target Values">
+    In the **Metrics** section, click **Add Metric** for each Key Result you want to track. For each metric, specify a `name`, the current `baseline` value (where you are today), the `target` value (where you want to be), and the `unit` of measurement. You can add up to 5 metrics per OKR. Metrics without a matching data source can be updated manually or via the API.
+  </Step>
+  <Step title="Assign to Teams">
+    In the **Teams** section, select all teams that are responsible for contributing to this OKR. Each assigned team will see the priority in their team dashboard and receive progress notifications. Team leads receive the weekly digest for all priorities assigned to their team.
+  </Step>
+  <Step title="Enable Weekly Monitoring Digest">
+    Toggle **Weekly Digest** to **On** at the bottom of the creation form. Select your preferred delivery channel (email, Slack, or both) and confirm the recipient list. Click **Create Priority** to save. The first digest will arrive the following Monday morning.
+  </Step>
+</Steps>
+
+<Tip>
+  Connect your strategic priorities to meeting agendas to unlock automatic progress updates. When a recurring meeting — such as a weekly team sync — has a linked priority, Progress Pilot extracts progress signals from the meeting's action items, discussion topics, and outcome notes and uses them to update the priority's progress score. Enable this in the priority's **Settings → Meeting Integration** tab by selecting the recurring meetings you want to link.
+</Tip>

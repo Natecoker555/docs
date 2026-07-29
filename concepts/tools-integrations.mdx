@@ -1,0 +1,143 @@
+---
+title: "Tools and Integrations: How the Agent Extends Its Capabilities"
+sidebarTitle: "Tools & Integrations"
+description: "Learn how Progress Pilot uses tools to interact with Google Workspace, Slack, Jira, databases, and other systems to complete operational tasks."
+---
+
+Progress Pilot's AI agent is powerful not because of reasoning alone, but because of what it can reach. Through a structured set of tools, the agent connects to the systems your organization already uses — reading from calendars and documents, writing to project trackers and communication channels, and querying live data from your databases. Every tool is a discrete, auditable action that the agent can call during a task, giving you full visibility into exactly what the agent did and why. This page explains how tools work, which ones are built in, and how to extend the agent with your own.
+
+## What Is a Tool in the Google ADK Model?
+
+In the [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/), a **tool** is a callable function that the agent can invoke during task execution. When the agent determines it needs external information or needs to perform an external action, it selects the appropriate tool, constructs the required parameters, calls the tool, and incorporates the result into its reasoning before continuing.
+
+Think of tools as the agent's hands: they are how it reaches outside its own context window and interacts with the real world. Each tool has:
+
+- A **name** that the agent uses to refer to it (e.g., `post_slack_message`)
+- A **schema** that defines the inputs it accepts and the output it returns
+- A **permission scope** that controls which workspaces and roles can use it
+- An **audit record** that is written every time the tool is called
+
+The agent never calls a tool that has not been explicitly enabled for your workspace, and it never calls a tool outside the scope of the current task.
+
+## Built-In Tools
+
+Progress Pilot ships with a set of built-in tools covering the most common enterprise operational systems. All built-in tools are available on every plan; they must be individually enabled per workspace in **Settings → Integrations**.
+
+| Tool Name | What It Does | System |
+|---|---|---|
+| `read_google_calendar` | Reads upcoming meetings and events for one or more users | Google Workspace |
+| `read_google_docs` | Reads the full text content of a specified document for use as context | Google Workspace |
+| `post_slack_message` | Sends a formatted message or summary to a specified Slack channel or DM | Slack |
+| `create_jira_ticket` | Creates a new issue in a specified Jira project with title, description, and labels | Jira |
+| `query_database` | Executes a read-only SQL query against a connected data source and returns structured results | Connected DB |
+| `send_email` | Composes and delivers a report or notification to one or more email recipients | Gmail / SMTP |
+
+<Info>
+  All database queries executed by `query_database` are strictly read-only. Progress Pilot never issues `INSERT`, `UPDATE`, `DELETE`, or `DROP` statements against your connected data sources. Write access to databases requires a custom tool registered via the API.
+</Info>
+
+## How the Agent Selects Tools
+
+During the **Plan** phase of every task, the agent reviews the goal, the available tools for your workspace, and the current context to determine which tools it will need and in what order. It does not call tools speculatively — it only calls a tool when it has a concrete reason to do so and when the tool's output is required for a subsequent step.
+
+<Steps>
+  <Step title="Task Goal Is Received">
+    The agent receives a structured task definition that includes the goal, any relevant parameters (e.g., a meeting ID or date range), and the output format expected.
+  </Step>
+  <Step title="Tool Selection During Planning">
+    The agent examines its available tools and produces an ordered list of tool calls it will make, along with the inputs it expects to pass to each one.
+  </Step>
+  <Step title="Sequential Tool Execution">
+    Tools are called in order. The output of one tool can become an input to the next — for example, reading a Google Doc and then using its content to create a Jira ticket.
+  </Step>
+  <Step title="Result Incorporation">
+    Each tool result is added to the agent's working context. The agent updates its plan if a result reveals new information that changes subsequent steps.
+  </Step>
+  <Step title="Output Generation">
+    Once all required tool calls are complete, the agent synthesizes the results into the final output artifact.
+  </Step>
+</Steps>
+
+## Tool Permissions
+
+Each tool must be explicitly enabled for a workspace before the agent can use it. Enabling a tool requires:
+
+1. Connecting the relevant integration (e.g., authorizing Progress Pilot to access your Google Workspace via OAuth 2.0)
+2. Enabling the specific tool in **Settings → Integrations → Tool Permissions**
+3. Optionally restricting which roles can trigger tasks that use that tool
+
+Tool permissions are enforced at both the workspace level and the role level. A user with the **Viewer** role cannot trigger tasks that invoke write-action tools like `create_jira_ticket` or `post_slack_message`, even if those tools are enabled for the workspace.
+
+<Warning>
+  Follow the principle of least privilege when enabling tools. Only enable the tools your workflows actually require, and scope each connected integration to the minimum permissions needed. For example, if you only use `read_google_docs`, do not grant Progress Pilot edit access to your Google Drive. Over-permissioned integrations increase your attack surface if credentials are ever compromised. You can review and revoke tool permissions at any time from **Settings → Integrations**.
+</Warning>
+
+## Custom Tool Registration
+
+If your organization uses internal systems, proprietary APIs, or data sources not covered by the built-in tool set, you can register custom tools via the Progress Pilot API. A custom tool is an HTTP endpoint you expose that conforms to the ADK tool schema; the agent calls it exactly as it would a built-in tool.
+
+To register a custom tool, you define:
+
+- The tool **name** and **description** (the agent uses the description to decide when to call it)
+- The **input schema** (a JSON Schema object describing the parameters the agent will pass)
+- The **output schema** (a JSON Schema object describing the response the agent should expect)
+- The **endpoint URL** and **authentication method** (API key or OAuth 2.0)
+
+```json
+{
+  "name": "get_crm_account",
+  "description": "Fetches account details and recent activity from the internal CRM for a given account ID.",
+  "endpoint": "https://api.your-company.com/crm/accounts/{account_id}",
+  "auth": {
+    "type": "api_key",
+    "header": "X-API-Key"
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "account_id": { "type": "string", "description": "The unique CRM account identifier." }
+    },
+    "required": ["account_id"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string" },
+      "health_score": { "type": "number" },
+      "last_activity_date": { "type": "string", "format": "date" }
+    }
+  }
+}
+```
+
+For full details on the registration payload, authentication options, and versioning, see the [API Reference → Agents](/api-reference/agents) documentation.
+
+## Integration Status and Health
+
+You can monitor the health of all connected integrations from the Progress Pilot dashboard under **Settings → Integrations → Status**. Each integration shows:
+
+- **Connection status** — whether the OAuth token or API key is valid and has not expired
+- **Last successful call** — the timestamp of the most recent successful tool invocation
+- **Error rate** — the percentage of tool calls that returned an error in the last 24 hours
+- **Permission scope** — the exact scopes granted to Progress Pilot for that integration
+
+<Tabs>
+  <Tab title="Google Workspace">
+    Google Workspace integrations use OAuth 2.0. The agent requests only the scopes required for the enabled tools:
+
+    - `calendar.readonly` for `read_google_calendar`
+    - `documents.readonly` for `read_google_docs`
+    - `gmail.send` for `send_email` (Gmail)
+
+    Tokens are refreshed automatically. If a refresh fails, the affected tasks are paused and a notification is sent to the workspace administrator.
+  </Tab>
+  <Tab title="Slack">
+    The Slack integration uses a bot token scoped to the channels you specify. The agent can only post to channels where the Progress Pilot bot has been explicitly invited. It cannot read message history unless the `channels:history` scope is granted.
+  </Tab>
+  <Tab title="Jira">
+    Jira connects via an API token associated with a service account you create in your Atlassian organization. Progress Pilot recommends creating a dedicated service account (e.g., `progress-pilot-bot@your-company.com`) with project-level permissions limited to the boards the agent needs to write to.
+  </Tab>
+  <Tab title="Databases">
+    Database connections use a read-only connection string (PostgreSQL, MySQL, BigQuery, Snowflake, and Redshift are supported). Progress Pilot stores the connection string encrypted at rest and never logs query results containing row-level data.
+  </Tab>
+</Tabs>

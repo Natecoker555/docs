@@ -1,0 +1,180 @@
+---
+title: "Modernized Reporting with AI-Generated Insights"
+sidebarTitle: "Reporting"
+description: "Generate rich operational reports automatically with Progress Pilot — from weekly status digests to cross-team performance dashboards, delivered on your schedule."
+---
+
+Progress Pilot transforms operational reporting from a manual, time-consuming chore into an automated intelligence layer. Instead of assembling status updates from a dozen sources every Friday afternoon, the agent pulls data from your connected integrations, analyzes trends and anomalies, and delivers polished, insight-rich reports to the right people at the right time — in whatever format your organization already uses.
+
+## Report Types
+
+<CardGroup cols={2}>
+  <Card title="Weekly Status Digest" icon="newspaper">
+    A comprehensive summary of the past week's activity across selected teams: completed work, open action items, meeting outcomes, and flagged risks. Ideal for leadership distribution.
+  </Card>
+  <Card title="Team Performance Summary" icon="chart-line">
+    A deep-dive into a single team's operational metrics over a selected period, including meeting efficiency scores, action item completion rates, and throughput trends.
+  </Card>
+  <Card title="Cross-Team Coordination Report" icon="arrows-split-up-and-left">
+    Tracks the health of inter-team workflows: handoff SLA adherence, dependency resolution times, broadcast acknowledgment rates, and coordination bottlenecks.
+  </Card>
+  <Card title="Meeting Efficiency Report" icon="users">
+    Aggregates meeting data — duration, attendance, agenda adherence, action item generation rate — and benchmarks it against your historical baseline and industry norms.
+  </Card>
+  <Card title="Custom Reports" icon="sliders">
+    Build reports from any combination of available data sources and metrics using the report builder. Save as a named template and reuse it across teams or time periods.
+  </Card>
+</CardGroup>
+
+## Generating a Report
+
+Trigger report generation at any time using the `/v1/reports/generate` endpoint. The following example generates a weekly status digest for the engineering team and delivers it to both a Slack channel and an email recipient:
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/reports/generate \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "report_type": "weekly_status",
+    "scope": "engineering",
+    "period": "last_7_days",
+    "delivery": {
+      "channels": ["slack", "email"],
+      "slack_channel": "#ops-reports",
+      "recipients": ["cto@company.com"]
+    }
+  }'
+```
+
+The `period` field accepts `last_7_days`, `last_30_days`, `last_quarter`, a custom ISO date range (`"2024-07-01/2024-07-31"`), or `"this_week"` / `"this_month"` for calendar-aligned periods.
+
+The API returns a report object with a status field that transitions from `generating` to `ready` once processing completes — typically within 30–90 seconds depending on report scope:
+
+```json
+{
+  "report_id": "rpt_01J3PW6XYZQT8VBN4KMH",
+  "report_type": "weekly_status",
+  "scope": "engineering",
+  "period": { "start": "2024-07-08", "end": "2024-07-14" },
+  "status": "ready",
+  "delivery_status": {
+    "slack": "delivered",
+    "email": "delivered"
+  },
+  "download_url": "https://api.progresspilot.ai/v1/reports/rpt_01J3PW6XYZQT8VBN4KMH/download",
+  "created_at": "2024-07-15T08:01:44Z"
+}
+```
+
+## Output Formats
+
+Progress Pilot supports multiple delivery formats. Specify your preferred format using the `format` field in the request body, or configure a default format per report type in **Settings → Reports**.
+
+| Format | Best For |
+|---|---|
+| **PDF** | Executive distribution, archiving, and printing. Includes cover page, table of contents, and branded header/footer. |
+| **HTML** | Embedding in internal portals or wikis. Fully self-contained with inline styles — no external dependencies. |
+| **JSON** | Programmatic consumption. Structured data suitable for ingestion into BI tools, dashboards, or downstream automation. |
+| **Google Docs** | Collaborative review and annotation. The agent creates a new Doc in your configured Drive folder and shares it with report recipients automatically. |
+
+<Tip>
+  Use **Google Docs** delivery to keep reports inside your existing knowledge management system. When a report lands in Drive, recipients can comment directly on specific findings, assign follow-up items as Docs action items, and maintain a searchable archive without switching tools. Connect your Google Workspace integration in **Settings → Integrations** to enable this format.
+</Tip>
+
+## Scheduling Reports
+
+Automate report delivery by configuring a schedule in **Settings → Scheduled Reports** or via the `/v1/reports/schedules` API endpoint.
+
+<Tabs>
+  <Tab title="Dashboard">
+    Navigate to **Reports → Schedules → New Schedule**. Select the report type, scope, period, format, and delivery channels. Then choose a frequency:
+
+    - **Daily** — runs at a time you specify in your workspace timezone
+    - **Weekly** — runs on a selected day of the week
+    - **Monthly** — runs on a selected date (1–28) each month
+    - **Custom Cron** — enter a cron expression for precise scheduling, e.g., `0 7 * * 1` for every Monday at 7:00 AM
+
+    Schedules activate immediately upon saving. The next scheduled run is shown on the schedule card.
+  </Tab>
+  <Tab title="API">
+    Create a schedule programmatically using the schedules endpoint:
+
+    ```bash
+    curl -X POST https://api.progresspilot.ai/v1/reports/schedules \
+      -H "Authorization: Bearer ppk_live_your_api_key" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "report_type": "team_performance",
+        "scope": "product",
+        "period": "last_7_days",
+        "format": "pdf",
+        "schedule": {
+          "frequency": "weekly",
+          "day_of_week": "monday",
+          "time": "07:00",
+          "timezone": "America/New_York"
+        },
+        "delivery": {
+          "channels": ["email"],
+          "recipients": ["vp-product@company.com", "cto@company.com"]
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Report Templates
+
+Templates let you define a report configuration once and reuse it across teams, periods, or delivery targets without re-specifying every parameter each time.
+
+To create a template:
+
+1. Generate a report with your desired configuration.
+2. On the report detail page, click **Save as Template** and give it a descriptive name (e.g., "Monthly Engineering Digest").
+3. The template appears in **Reports → Templates** and in the report generation form's template picker.
+
+When generating a report from a template, you can override any field — such as `scope` or `period` — while inheriting the rest of the configuration. This makes it easy to run the same report structure against multiple teams without rebuilding it from scratch each time.
+
+## AI Insights
+
+Progress Pilot adds a layer of analysis to every report that goes beyond presenting raw data. The **Insights** section of each report includes:
+
+<CardGroup cols={2}>
+  <Card title="Trend Lines" icon="chart-mixed">
+    The agent plots metric trajectories over the selected period and highlights inflection points — moments where a metric's direction changed — with a brief explanation of what operational events may have caused the shift.
+  </Card>
+  <Card title="Anomaly Callouts" icon="circle-exclamation">
+    Statistical outliers are flagged inline. For example, if meeting duration spiked 40% in week three of the reporting period, the agent surfaces this with context about which recurring meetings drove the increase.
+  </Card>
+  <Card title="Comparative Benchmarks" icon="scale-balanced">
+    Key metrics are compared against your organization's historical baseline, your configured targets, and — where applicable — anonymized industry benchmarks from similar organizations in Progress Pilot's network.
+  </Card>
+  <Card title="Recommendations" icon="lightbulb">
+    Each report closes with a ranked list of recommended actions derived from the reporting period's data, ready to be assigned directly from the report view or pushed to your project management tool.
+  </Card>
+</CardGroup>
+
+## Accessing Report History
+
+Retrieve a paginated list of all previously generated reports using the reports list endpoint:
+
+```bash
+curl -X GET "https://api.progresspilot.ai/v1/reports?scope=engineering&limit=20&page=1" \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+Filter available query parameters:
+
+| Parameter | Description |
+|---|---|
+| `scope` | Filter by team slug |
+| `report_type` | Filter by report type identifier |
+| `from` / `to` | ISO date range for the report's creation date |
+| `format` | Filter by output format |
+| `limit` / `page` | Pagination controls (default limit: 20, max: 100) |
+
+Reports are retained in your account's history for 12 months on Business plans and indefinitely on Enterprise plans. You can download any historical report at any time from its detail page or via the `download_url` returned in the report object.
+
+<Note>
+  JSON-format reports generated via the API are available for download for 72 hours after creation. To retain them permanently, configure Google Docs or PDF delivery, or archive the JSON payload in your own storage at generation time.
+</Note>

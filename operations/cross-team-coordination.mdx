@@ -1,0 +1,139 @@
+---
+title: "Cross-Team Coordination with the Progress Pilot Agent"
+sidebarTitle: "Cross-Team Coordination"
+description: "Use Progress Pilot to orchestrate workflows across departments, manage handoffs, broadcast updates, and keep every team aligned without the overhead of manual coordination."
+---
+
+Coordinating work across multiple teams is one of the highest-friction activities in any organization. Progress Pilot's coordination engine replaces the manual overhead of status pings, forwarded email threads, and cross-posted Slack messages with a structured, agent-driven system that tracks dependencies, manages handoffs, and ensures every team has the context it needs — exactly when it needs it.
+
+## The Problem It Solves
+
+Without dedicated coordination tooling, cross-team work typically breaks down in predictable ways:
+
+<CardGroup cols={2}>
+  <Card title="Manual Coordination Overhead" icon="clock">
+    Team leads spend hours each week chasing status updates, consolidating responses, and forwarding information that should flow automatically.
+  </Card>
+  <Card title="Context Switching" icon="arrow-right-arrow-left">
+    Contributors lose focus constantly as they field requests, clarify requirements, and re-explain decisions to teams who weren't in the original conversation.
+  </Card>
+  <Card title="Dropped Handoffs" icon="triangle-exclamation">
+    Work sits idle between teams because the receiving team wasn't notified, the deliverable wasn't clearly defined, or no one owned the transition moment.
+  </Card>
+  <Card title="Duplicate Work" icon="copy">
+    Without visibility into what other teams are building, teams solve the same problem independently — wasting cycles and creating inconsistencies.
+  </Card>
+</CardGroup>
+
+Progress Pilot addresses each of these failure modes with features purpose-built for cross-team operational workflows.
+
+## Coordination Features
+
+<Tabs>
+  <Tab title="Broadcast Updates">
+    Send a single message to multiple teams simultaneously across every connected channel. Broadcasts are logged, linked to the triggering workflow or task, and acknowledged by recipients — so you always have a record of what was communicated and to whom.
+  </Tab>
+  <Tab title="Dependency Tracking">
+    Define which teams depend on outputs from other teams. Progress Pilot monitors the status of upstream deliverables and proactively alerts downstream teams when something is at risk of missing its handoff date, giving them lead time to adjust rather than react.
+  </Tab>
+  <Tab title="Handoff Tasks">
+    When Team A completes a deliverable, the agent automatically creates a structured handoff task for Team B that includes the deliverable artifact, relevant context, acceptance criteria, and the original requestor — eliminating the "who do I talk to about this?" delay.
+  </Tab>
+  <Tab title="Priority Sync">
+    Surface and reconcile conflicting priorities between departments. When two teams are scheduled to work on interdependent items in incompatible sequences, Progress Pilot flags the misalignment and suggests a resolution before it causes a bottleneck.
+  </Tab>
+</Tabs>
+
+## Setting Up a Coordination Workflow
+
+<Steps>
+  <Step title="Define Teams and Their Members">
+    Navigate to **Settings → Teams** and create a team entry for each department you want to coordinate. Add team members by name or email, and designate at least one team lead who will receive coordination notifications and own escalations. Team definitions are workspace-scoped and reusable across all workflows.
+  </Step>
+  <Step title="Map Team Dependencies">
+    In **Settings → Dependencies**, create dependency relationships between teams. A dependency relationship specifies that Team B relies on outputs from Team A for a given workflow category — for example, the design team hands off finalized specs to engineering before implementation begins. You can define dependencies as blocking (Team B cannot start until Team A delivers) or informational (Team B is notified but not blocked).
+  </Step>
+  <Step title="Create a Coordination Workflow">
+    Navigate to **Workflows → New Workflow** and configure the following fields:
+
+    | Field | Description |
+    |---|---|
+    | **Name** | A descriptive label for the workflow, e.g., "API Release Coordination" |
+    | **Trigger** | What initiates the workflow: a scheduled date, a task status change, or a manual trigger |
+    | **Teams Involved** | Select all teams that participate in or are notified by this workflow |
+    | **Actions** | The ordered sequence of broadcasts, handoff tasks, and dependency checks the agent executes |
+
+    Save the workflow. It becomes active immediately if the trigger condition is already met, or arms itself to fire when the trigger occurs.
+  </Step>
+  <Step title="Test with a Sample Cross-Team Task">
+    Before running the workflow in production, use the **Test Run** button to execute it against a sandbox task. The test run simulates all actions — including broadcasts and handoff task creation — in a staging environment without sending live notifications to team members. Review the execution log to confirm each action fires in the correct order with the correct recipients, then promote the workflow to production.
+  </Step>
+</Steps>
+
+<Note>
+  Creating and editing team definitions requires **Admin** access in your Progress Pilot workspace. Members with Editor or Viewer roles can trigger workflows and view coordination dashboards, but cannot modify team membership or dependency maps. To request Admin access, contact your workspace owner.
+</Note>
+
+## Handoff Management
+
+Progress Pilot tracks the complete lifecycle of every handoff between teams. When a workflow reaches a handoff step, the agent:
+
+1. Marks the upstream team's deliverable as **Pending Handoff** and notifies the team lead to confirm it is ready.
+2. Once confirmed, creates a **Handoff Task** in the downstream team's queue with full context attached.
+3. Monitors the downstream team's acknowledgment. If the task is not acknowledged within a configurable SLA window (default: 4 business hours), the agent escalates to the team lead and workflow owner.
+4. Closes the handoff loop when the downstream team marks the task as received, updating the workflow's dependency status and unblocking any tasks waiting on this confirmation.
+
+All handoff events are timestamped and visible in the **Coordination Timeline** view on the workflow detail page, giving you a complete audit trail from kickoff to completion.
+
+## Broadcasting Updates
+
+To send an update to multiple teams simultaneously — from the API or dashboard — use the `broadcast_update` task:
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/agents/run \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "broadcast_update",
+    "context": {
+      "teams": ["engineering", "product", "design"],
+      "message": "API v2 spec is finalized. Handoff to engineering begins Monday.",
+      "channels": ["slack", "email"]
+    }
+  }'
+```
+
+The `teams` array accepts team slugs as defined in your workspace. The `channels` array determines where each team receives the message — Progress Pilot delivers to each team's configured Slack channel and the email addresses of all team members simultaneously.
+
+The API response includes a `broadcast_id` you can use to query delivery status:
+
+```json
+{
+  "broadcast_id": "bcast_01J3MN7XPQT9WKZ2RVHL",
+  "status": "delivered",
+  "teams_notified": 3,
+  "delivery_summary": {
+    "slack": { "delivered": 3, "failed": 0 },
+    "email": { "delivered": 11, "failed": 0 }
+  },
+  "timestamp": "2024-07-15T14:05:22Z"
+}
+```
+
+<Warning>
+  Broadcasts cannot be recalled once delivered. If you need to send a correction, trigger a follow-up broadcast with the updated information and reference the original `broadcast_id` in your message for context.
+</Warning>
+
+## Dependency Tracking Dashboard
+
+The **Dependencies** tab in your coordination dashboard provides a live view of every inter-team dependency across active workflows:
+
+| Column | Description |
+|---|---|
+| **Dependency** | The upstream → downstream team relationship and the deliverable in question |
+| **Status** | `On Track`, `At Risk`, or `Blocked` based on the upstream team's progress |
+| **Due Date** | When the handoff is scheduled to occur |
+| **Lead Time Remaining** | How much buffer exists before a delay impacts the downstream team's schedule |
+| **Owner** | The team lead accountable for resolving blocks |
+
+Dependencies flagged as **At Risk** are highlighted in amber. **Blocked** dependencies trigger an automatic escalation notification to both team leads and the workflow owner. You can click any dependency row to view its full history, related tasks, and available resolution actions.

@@ -1,30 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
+  "projectType": "saas",
+  "projectName": "Progress Pilot",
+  "projectDescription": "An AI-powered operations agent built on Google ADK that streamlines cross-team coordination, meeting intelligence, reporting, data governance, and strategic planning.",
   "theme": "almond",
-  "name": "Progress Pilot",
-  "colors": {
-    "primary": "#ef7025",
-    "light": "#eec9bc",
-    "dark": "#4fa1ab"
-  },
-  "favicon": "/favicon.svg",
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:support@progresspilot.ai"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Get Started",
-      "href": "https://app.progresspilot.ai"
-    }
-  },
+  "primaryColor": "#ef7025",
+  "lightColor": "#eec9bc",
+  "darkColor": "#4fa1ab",
   "navigation": {
     "tabs": [
       {
@@ -108,10 +89,26 @@
       }
     ]
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/progresspilot",
-      "linkedin": "https://linkedin.com/company/progresspilot"
-    }
-  }
+  "keyFeatures": [
+    "AI-powered meeting note-taking with detailed breakdowns and action item extraction",
+    "Cross-team coordination workflows powered by Google ADK",
+    "Operational process improvement recommendations",
+    "Modernized reporting with AI-generated insights",
+    "Data governance controls and audit trails",
+    "Strategic operational priority tracking",
+    "Multi-tool and multi-system integrations (Google Workspace, Slack, Jira, etc.)",
+    "Enterprise-grade security with role-based access controls",
+    "Configurable AI agent behavior per team or department"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/agents/run — trigger an agent task",
+    "POST /api/v1/meetings/start — begin a meeting session with note-taking",
+    "GET /api/v1/meetings/{id}/summary — retrieve meeting summary and action items",
+    "GET /api/v1/reports — list generated operational reports",
+    "POST /api/v1/reports/generate — generate a new report",
+    "GET /api/v1/tasks — list tracked action items and priorities",
+    "PATCH /api/v1/tasks/{id} — update task status",
+    "GET /api/v1/integrations — list connected tools and systems",
+    "POST /api/v1/integrations/connect — connect a new tool or system"
+  ]
 }

@@ -1,0 +1,335 @@
+---
+title: "REST API Endpoints for Meeting Intelligence"
+sidebarTitle: "Meetings"
+description: "Manage meeting sessions, retrieve transcripts and summaries, and list action items via the Progress Pilot meetings API endpoints."
+---
+
+The Meetings API is your interface to Progress Pilot's meeting intelligence layer. You can use it to programmatically start a monitored meeting session across Google Meet, Zoom, or Microsoft Teams; retrieve the raw transcript once the meeting ends; access a structured AI-generated summary; and extract the action items that were committed to during the call. All meeting data is retained according to your plan's data retention policy and accessible immediately after the meeting session closes.
+
+---
+
+## Start a Meeting Session
+
+<api-endpoint method="POST" url="https://api.progresspilot.ai/v1/meetings/start" />
+
+Instructs the Progress Pilot agent to join and monitor a meeting. The agent joins via the returned `agent_join_link` and begins capturing audio and generating a real-time transcript.
+
+### Request Body
+
+<ParamField body="title" type="string" required>
+  A human-readable name for this meeting session, used in summaries, reports, and the dashboard (e.g. `"Q4 Planning Kickoff"`).
+</ParamField>
+
+<ParamField body="platform" type="string" required>
+  The video conferencing platform. Accepted values: `google_meet`, `zoom`, `teams`.
+</ParamField>
+
+<ParamField body="meeting_url" type="string" required>
+  The invite or join URL for the meeting (e.g. a Google Meet link or Zoom join URL). The Progress Pilot agent uses this to join the call.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/meetings/start \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Q4 Planning Kickoff",
+    "platform": "google_meet",
+    "meeting_url": "https://meet.google.com/abc-defg-hij"
+  }'
+```
+
+### Response — 201 Created
+
+```json
+{
+  "success": true,
+  "data": {
+    "meeting_id": "meet_abc123",
+    "title": "Q4 Planning Kickoff",
+    "platform": "google_meet",
+    "status": "joining",
+    "agent_join_link": "https://agent.progresspilot.ai/join/meet_abc123",
+    "started_at": "2024-10-15T10:00:00Z"
+  }
+}
+```
+
+<ResponseField name="data.meeting_id" type="string">
+  The unique identifier for this meeting session. Use this in all subsequent requests for transcript, summary, and action items.
+</ResponseField>
+
+<ResponseField name="data.agent_join_link" type="string">
+  A URL that confirms the agent's join status. Share this with your team or open it in a browser to verify the agent is connected to the call.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Initial session status. Transitions from `joining` → `active` once the agent is in the call, then `processing` after the call ends, and finally `completed`.
+</ResponseField>
+
+---
+
+## Get Meeting Details
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/meetings/{id}" />
+
+Returns the full meeting object including current status, detected participants, and duration.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `meeting_id` of the session to retrieve.
+</ParamField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "meeting_id": "meet_abc123",
+    "title": "Q4 Planning Kickoff",
+    "platform": "google_meet",
+    "status": "completed",
+    "participants": [
+      { "name": "Sarah Chen", "email": "sarah.chen@company.com" },
+      { "name": "James Park", "email": "james.park@company.com" },
+      { "name": "Priya Nair", "email": "priya.nair@company.com" }
+    ],
+    "started_at": "2024-10-15T10:00:00Z",
+    "ended_at": "2024-10-15T11:02:00Z",
+    "duration_seconds": 3720,
+    "transcript_available": true,
+    "summary_available": true
+  }
+}
+```
+
+---
+
+## Get Meeting Transcript
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/meetings/{id}/transcript" />
+
+Returns the full verbatim transcript of the meeting, with each entry attributed to a speaker and timestamped. Available as soon as the `transcript_available` field on the meeting object is `true`.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `meeting_id` of the session.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="format" type="string">
+  Transcript delivery format. Accepted values: `json` (default), `txt`, `docx`. When `txt` or `docx` is requested, the response is a binary file download rather than a JSON envelope.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page of transcript entries to retrieve. Defaults to `1`.
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Number of transcript entries per page. Defaults to `100`. Maximum is `500`.
+</ParamField>
+
+### Example Response — JSON Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "meeting_id": "meet_abc123",
+    "entries": [
+      {
+        "entry_id": "tr_001",
+        "speaker": "Sarah Chen",
+        "timestamp": "2024-10-15T10:01:14Z",
+        "offset_seconds": 74,
+        "text": "Let's start with the roadmap. James, can you walk us through the updated draft?"
+      },
+      {
+        "entry_id": "tr_002",
+        "speaker": "James Park",
+        "timestamp": "2024-10-15T10:01:20Z",
+        "offset_seconds": 80,
+        "text": "Sure. I'll send the updated draft by Thursday so everyone has time to review before the design sync."
+      }
+    ]
+  },
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "per_page": 100,
+      "total": 312,
+      "total_pages": 4
+    }
+  }
+}
+```
+
+---
+
+## Get Meeting Summary
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/meetings/{id}/summary" />
+
+Returns the AI-generated structured summary for a completed meeting. The `format` parameter controls how much detail is included in the response.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `meeting_id` of the session.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="format" type="string">
+  Summary depth. Accepted values:
+  - `brief` — a single paragraph overview and a bullet list of key decisions
+  - `standard` (default) — overview, decisions, action items, and next steps
+  - `detailed` — full standard output plus a per-topic breakdown and speaker attribution
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.progresspilot.ai/v1/meetings/meet_abc123/summary?format=detailed" \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "meeting_id": "meet_abc123",
+    "title": "Q4 Planning Kickoff",
+    "format": "detailed",
+    "overview": "The team aligned on Q4 roadmap priorities, confirmed the November 1st launch target, and rescheduled the design review to October 22nd. Three action items were assigned.",
+    "key_decisions": [
+      "November 1st launch date confirmed. No changes to scope.",
+      "Design review rescheduled from October 25th to October 22nd.",
+      "James to own roadmap communication with stakeholders."
+    ],
+    "topics": [
+      {
+        "topic": "Q4 Roadmap Review",
+        "duration_seconds": 1240,
+        "summary": "James presented the updated roadmap. The team confirmed priorities and locked the launch date.",
+        "participants": ["Sarah Chen", "James Park", "Priya Nair"]
+      },
+      {
+        "topic": "Design Review Scheduling",
+        "duration_seconds": 480,
+        "summary": "Due to a conflict with Priya's travel schedule, the design review was moved three days earlier.",
+        "participants": ["Sarah Chen", "Priya Nair"]
+      }
+    ],
+    "action_items": [
+      {
+        "title": "Send updated roadmap draft",
+        "assignee": "james.park@company.com",
+        "due_date": "2024-10-17",
+        "source_quote": "I'll send the updated draft by Thursday."
+      }
+    ],
+    "next_steps": "Design review on October 22nd. Follow-up all-hands scheduled for October 29th.",
+    "generated_at": "2024-10-15T11:05:00Z"
+  }
+}
+```
+
+<Note>
+  Summary generation begins automatically when the meeting ends and is typically available within 2–3 minutes. Check the `summary_available` field on the meeting object before requesting a summary.
+</Note>
+
+---
+
+## List Action Items
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/meetings/{id}/action-items" />
+
+Returns all action items extracted from the meeting by the AI agent, each with an assignee, due date, and the source quote from the transcript that triggered extraction.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `meeting_id` of the session.
+</ParamField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "task_id": "t_001",
+      "title": "Send updated roadmap draft by Thursday",
+      "assignee": "james.park@company.com",
+      "due_date": "2024-10-17",
+      "status": "open",
+      "source_quote": "I'll send the updated draft by Thursday.",
+      "source_timestamp": "2024-10-15T10:01:20Z"
+    },
+    {
+      "task_id": "t_002",
+      "title": "Confirm venue for October 22nd design review",
+      "assignee": "priya.nair@company.com",
+      "due_date": "2024-10-18",
+      "status": "open",
+      "source_quote": "Priya, can you confirm the room booking by end of week?",
+      "source_timestamp": "2024-10-15T10:24:45Z"
+    }
+  ]
+}
+```
+
+<ResponseField name="data[].source_quote" type="string">
+  The verbatim quote from the transcript that the agent used to extract this action item. Useful for providing context when syncing tasks to external systems.
+</ResponseField>
+
+<Tip>
+  Action items returned by this endpoint are also accessible via `GET /v1/tasks?meeting_id={id}` and can be updated or marked complete through the Tasks API.
+</Tip>
+
+---
+
+## List All Meetings
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/meetings" />
+
+Returns a paginated list of all meeting sessions for your account.
+
+### Query Parameters
+
+<ParamField query="from" type="string">
+  ISO 8601 start date for filtering by `started_at`. Example: `2024-10-01T00:00:00Z`.
+</ParamField>
+
+<ParamField query="to" type="string">
+  ISO 8601 end date for filtering by `started_at`. Example: `2024-10-31T23:59:59Z`.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by meeting status. One of: `joining`, `active`, `processing`, `completed`, `failed`.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page number to retrieve. Defaults to `1`.
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Number of meetings per page. Defaults to `20`. Maximum is `100`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.progresspilot.ai/v1/meetings?status=completed&from=2024-10-01T00:00:00Z&to=2024-10-31T23:59:59Z&page=1&per_page=20" \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```

@@ -1,0 +1,120 @@
+---
+title: "Configure Your Progress Pilot Workspace"
+sidebarTitle: "Workspace Setup"
+description: "Set up your Progress Pilot organization, invite team members, configure roles, and prepare your workspace for AI-powered operations."
+---
+
+Before you start running agent tasks, a few minutes of workspace configuration will pay dividends across your entire team. This guide walks you through naming and customizing your organization, inviting colleagues, assigning the right roles, and locking down your security settings. A well-configured workspace ensures that every agent output reaches the right people with the appropriate level of access — and that your data stays protected throughout.
+
+## Organization Setup
+
+Your organization workspace is the shared environment where all agent tasks, integrations, and results live. Navigate to **Settings → Organization** to review and update the following fields at any time:
+
+| Setting | Description |
+|---|---|
+| **Organization name** | The display name shown across the dashboard and in notification emails. |
+| **Workspace slug** | The unique identifier used in all API paths (set at creation, cannot be changed). |
+| **Industry** | Informs default agent templates and reporting terminology. |
+| **Time zone** | All scheduled tasks and timestamps use this zone by default. |
+| **Default language** | Sets the language for AI-generated summaries, reports, and notifications. |
+
+<Steps>
+
+  <Step title="Create the Organization Workspace">
+    If you signed up through [app.progresspilot.ai](https://app.progresspilot.ai) and completed the initial onboarding, your workspace already exists. To create an additional organization (for example, a sandbox environment), click your **organization switcher** in the top-left corner of the dashboard and select **Create New Organization**.
+
+    Choose a workspace slug carefully — this value is embedded in every API call your team makes:
+
+    ```
+    https://api.progresspilot.ai/v1/org/{workspace_slug}/agents/run
+    ```
+
+    Slugs must be lowercase, alphanumeric, and may contain hyphens. Spaces and special characters are not permitted.
+  </Step>
+
+  <Step title="Set Workspace Preferences">
+    Go to **Settings → Preferences** to configure the defaults that govern how Progress Pilot behaves across your organization.
+
+    **Time Zone**
+
+    Select your primary operating time zone from the dropdown. This controls:
+    - When scheduled agent tasks fire
+    - Timestamps on all task results and audit logs
+    - Daily digest delivery times
+
+    **Default Language**
+
+    Progress Pilot generates summaries, reports, and action-item lists in the language you select. Supported languages include English, Spanish, French, German, Japanese, and Portuguese (Brazil). Individual users can override this preference in their personal profile settings.
+
+    **Notification Defaults**
+
+    Choose whether agent task completions trigger email notifications, Slack messages, or both. Individual users may adjust their personal notification preferences, but the workspace default applies until they do.
+
+    Click **Save Preferences** to apply your changes.
+  </Step>
+
+  <Step title="Invite Team Members">
+    Go to **Settings → Team** and click **Invite Member**. Enter the email addresses of the people you want to add — you can invite multiple people at once by entering each address on a new line.
+
+    Each invitee will receive an email from `invites@progresspilot.ai` with a personalized link valid for 72 hours. When they accept the invite and sign in, they will automatically join your organization with the role you assigned.
+
+    <Info>
+      Invited users who do not yet have a Progress Pilot account will be prompted to create one before joining your organization. Their account creation is seamlessly tied to your invitation, so no separate signup is needed.
+    </Info>
+
+    If an invite expires before it is accepted, return to **Settings → Team → Pending Invitations** and click **Resend** next to the relevant email address.
+  </Step>
+
+  <Step title="Assign Roles">
+    Progress Pilot uses a four-tier role system. Assign roles during the invite flow or update them at any time from **Settings → Team** by clicking the role badge next to any member's name.
+
+    | Role | Dashboard Access | Run Agent Tasks | Manage Integrations | Manage Team & Billing |
+    |---|---|---|---|---|
+    | **Admin** | Full | ✅ | ✅ | ✅ |
+    | **Manager** | Full | ✅ | ✅ | ❌ |
+    | **Contributor** | Own tasks + shared results | ✅ | ❌ | ❌ |
+    | **Viewer** | Read-only | ❌ | ❌ | ❌ |
+
+    **Role Guidance**
+
+    - Assign **Admin** only to the people responsible for billing and security policy. Most organizations need one or two admins.
+    - **Manager** is the right role for operations leads and team leads who need to configure integrations but should not control billing.
+    - **Contributor** suits individual contributors who run agent tasks and review results as part of their day-to-day work.
+    - **Viewer** is ideal for executives, stakeholders, or auditors who need visibility into agent outputs without the ability to modify anything.
+
+    <Warning>
+      Admin role holders can delete the organization and revoke access for all other members. Grant Admin sparingly and review the Admin list quarterly.
+    </Warning>
+  </Step>
+
+</Steps>
+
+## Security Settings
+
+Progress Pilot is built for enterprise environments where data security and access control are non-negotiable. Configure the following settings in **Settings → Security**.
+
+### Two-Factor Authentication (2FA)
+
+Enable organization-wide 2FA enforcement to require all members to authenticate with a second factor (TOTP app or hardware key) at every login. When you toggle **Require 2FA for all members**, any member without 2FA configured will be prompted to enroll on their next login — they will not be able to access the workspace until enrollment is complete.
+
+### Single Sign-On (SSO)
+
+<Note>
+  SSO is available on the **Enterprise** plan. If you are on a lower tier, upgrade in **Settings → Billing** or contact [sales@progresspilot.ai](mailto:sales@progresspilot.ai) to discuss your options.
+</Note>
+
+Progress Pilot supports SAML 2.0 and OIDC-based SSO with all major identity providers including Okta, Microsoft Entra ID (Azure AD), Google Workspace, and OneLogin. To configure SSO:
+
+1. Go to **Settings → Security → Single Sign-On**.
+2. Select your identity provider from the dropdown or choose **Custom SAML / OIDC**.
+3. Follow the provider-specific instructions to create an application in your IdP and paste the metadata URL or certificate into the Progress Pilot form.
+4. Click **Test Connection** to verify the configuration before enabling it.
+5. Toggle **Enforce SSO** to require all future logins to go through your identity provider.
+
+### IP Allowlisting
+
+Restrict API and dashboard access to a specific set of IP addresses or CIDR ranges. Navigate to **Settings → Security → IP Allowlist** and enter each allowed address or range. Progress Pilot will reject all requests originating outside the allowlist with a `403 Forbidden` response.
+
+<Warning>
+  Before enabling IP allowlisting, make sure your own IP address (or your office/VPN range) is on the list. Locking yourself out requires a support request to restore access.
+</Warning>

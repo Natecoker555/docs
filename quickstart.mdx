@@ -1,47 +1,122 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Progress Pilot in Under 10 Minutes"
+sidebarTitle: "Quickstart"
+description: "Learn how to create your workspace, connect your first integration, and run your first AI agent task with Progress Pilot in under 10 minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+Progress Pilot gets you from signup to your first AI-powered operation in minutes. By the end of this guide, you will have a live workspace, a working API key, at least one integration connected, and a real agent task running against your data. No prior experience with AI agents or the Google ADK is required — Progress Pilot handles the infrastructure so you can focus on the outcomes.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+
+  <Step title="Create Your Account">
+    Navigate to [app.progresspilot.ai](https://app.progresspilot.ai) and click **Get Started Free**. Fill in your name, work email address, and a password, then click **Create Account**.
+
+    Check your inbox for a verification email from `no-reply@progresspilot.ai` and click the confirmation link. Once verified, you will be prompted to create your organization.
+
+    - **Organization name** — this is the display name your teammates will see (e.g., `Acme Operations`).
+    - **Workspace slug** — a URL-safe identifier auto-generated from your org name (e.g., `acme-operations`). You can edit it before saving; it cannot be changed later.
+    - **Industry** — helps Progress Pilot pre-configure relevant agent templates for your team.
+
+    Click **Create Organization** to land in your new workspace dashboard.
+  </Step>
+
+  <Step title="Generate an API Key">
+    Open **Settings** from the left sidebar, then navigate to **API Keys**. Click **Create New Key**.
+
+    Give the key a descriptive label (e.g., `local-dev` or `production-integration`) and choose a permission scope:
+
+    | Scope | What it allows |
+    |---|---|
+    | `read` | Fetch task results and org metadata |
+    | `write` | Create and trigger agent tasks |
+    | `admin` | Full access including user and integration management |
+
+    Click **Generate Key**. Your key is shown exactly once — copy it now and store it in a secrets manager or environment variable.
+
+    API keys follow this format:
+
+    ```
+    ppk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+
+    <Warning>
+      Never commit your API key to source control. Use environment variables or a secrets manager such as Google Secret Manager, AWS Secrets Manager, or HashiCorp Vault.
+    </Warning>
+  </Step>
+
+  <Step title="Connect Your First Integration">
+    Progress Pilot connects to the tools your team already uses. In your workspace, go to **Integrations** in the left sidebar and click **Add Integration**.
+
+    Choose **Google Workspace** or **Slack** to get started quickly:
+
+    **Google Workspace**
+    1. Click **Connect Google Workspace**.
+    2. Sign in with a Google account that has the necessary permissions for your domain.
+    3. Grant the requested OAuth scopes (Calendar read, Meet recordings, Drive read).
+    4. Click **Allow** — Progress Pilot will confirm the connection with a green status indicator.
+
+    **Slack**
+    1. Click **Connect Slack**.
+    2. Select the Slack workspace you want to link.
+    3. Choose the default channel where Progress Pilot should post agent outputs.
+    4. Click **Allow** to complete the OAuth flow.
+
+    <Note>
+      You can connect multiple integrations at any time. Progress Pilot supports Google Workspace, Slack, Jira, and additional enterprise connectors. See the [Integrations](/integrations/overview) documentation for the full list.
+    </Note>
+  </Step>
+
+  <Step title="Run Your First Agent Task">
+    With your API key and an integration connected, you are ready to trigger your first agent task. The example below requests a detailed meeting summary for a Google Meet session.
+
+    **Option A — Dashboard**
+
+    Go to **Agent Tasks** in the sidebar, click **New Task**, select **Summarize Meeting**, choose a recent meeting from the list, and click **Run Task**. Results appear in the task detail view within seconds.
+
+    **Option B — API (cURL)**
 
     ```bash
-    npm install your-package
+    curl -X POST https://api.progresspilot.ai/v1/agents/run \
+      -H "Authorization: Bearer ppk_live_your_api_key" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "task": "summarize_meeting",
+        "context": {
+          "meeting_id": "meet_abc123",
+          "output_format": "detailed"
+        }
+      }'
     ```
-  </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+    A successful request returns a task object immediately while the agent processes in the background:
 
-    ```bash
-    your-cli start
+    ```json
+    {
+      "task_id": "task_xyz789",
+      "status": "processing",
+      "estimated_completion": "30s",
+      "result_webhook": "https://api.progresspilot.ai/v1/tasks/task_xyz789"
+    }
     ```
+
+    Poll the `result_webhook` URL with your API key to retrieve the completed summary, or configure a webhook endpoint in **Settings → Webhooks** to receive results automatically when they are ready.
+
+    <Tip>
+      Use the `output_format` field to control detail level. Accepted values are `brief`, `detailed`, and `executive`. The `executive` format produces a concise three-bullet summary optimized for leadership audiences.
+    </Tip>
   </Step>
+
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## What's Next
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+You have a working Progress Pilot workspace and your first agent task under your belt. Explore the capabilities that matter most to your team:
+
+<CardGroup cols={2}>
+  <Card title="Meeting Intelligence" icon="microphone" href="/meetings/overview">
+    Automatically summarize, transcribe, and extract action items from every meeting — no manual notes required.
+  </Card>
+  <Card title="Integrations" icon="plug" href="/integrations/overview">
+    Connect Google Workspace, Slack, Jira, and more to give Progress Pilot full visibility into your operations.
+  </Card>
+</CardGroup>

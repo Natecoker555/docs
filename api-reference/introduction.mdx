@@ -1,0 +1,140 @@
+---
+title: "Progress Pilot REST API Reference"
+sidebarTitle: "Introduction"
+description: "The Progress Pilot REST API lets you trigger agent tasks, manage meetings, generate reports, and track action items programmatically. Base URL: https://api.progresspilot.ai/v1"
+---
+
+The Progress Pilot REST API gives you programmatic access to the full suite of AI-powered operations capabilities — from triggering agent tasks and processing meeting intelligence to generating reports and managing cross-team action items. Every feature available in the Progress Pilot dashboard is accessible through this API, enabling you to build deep integrations, automate workflows, and embed Progress Pilot's intelligence directly into your own tools and systems.
+
+## Base URL
+
+All API requests are made to the following base URL. Every endpoint documented in this reference is relative to this root.
+
+```
+https://api.progresspilot.ai/v1
+```
+
+## Request Format
+
+All request bodies must be sent as JSON. Include the `Content-Type: application/json` header on every request that carries a body (`POST`, `PATCH`, `PUT`). Path and query parameters follow standard URL conventions.
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/agents/run \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "task": "summarize_meeting", "context": { "meeting_id": "meet_abc123" } }'
+```
+
+## Response Format
+
+Every response — success or error — is returned as a JSON object with a consistent envelope. The `success` boolean tells you at a glance whether the request was fulfilled. The `data` key contains the resource or result payload. The `meta` key always includes a unique `request_id` for debugging and a server-side `timestamp`.
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "request_id": "req_abc123",
+    "timestamp": "2024-10-15T10:00:00Z"
+  }
+}
+```
+
+### Error Responses
+
+When a request fails, `success` is `false` and the `error` object provides a machine-readable `code`, a human-readable `message`, and a `docs_url` pointing directly to the relevant documentation.
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "The provided API key is invalid or revoked.",
+    "docs_url": "https://docs.progresspilot.ai/api-reference/authentication"
+  }
+}
+```
+
+## HTTP Status Codes
+
+Progress Pilot uses standard HTTP status codes. Use the `error.code` field in the response body for programmatic error handling rather than relying solely on the status code.
+
+| Status Code | Meaning |
+|---|---|
+| `200 OK` | The request succeeded and the response body contains the result. |
+| `201 Created` | A new resource was created successfully. |
+| `400 Bad Request` | The request was malformed, missing required fields, or contained invalid values. |
+| `401 Unauthorized` | No API key was provided, or the provided key is invalid or expired. |
+| `403 Forbidden` | The API key is valid but lacks the permissions required for this operation. |
+| `404 Not Found` | The requested resource does not exist. |
+| `429 Too Many Requests` | You have exceeded your plan's rate limit. |
+| `500 Internal Server Error` | An unexpected error occurred on Progress Pilot's servers. |
+
+## Rate Limits
+
+Rate limits are enforced per API key on a rolling 60-second window. If you exceed your limit, requests return `429 Too Many Requests` until the window resets. Implement exponential backoff in your integration to handle spikes gracefully.
+
+| Plan | Rate Limit |
+|---|---|
+| Standard | 100 requests per minute |
+| Enterprise | 1,000 requests per minute |
+
+<Tip>
+  Your current rate limit usage is returned in every response via the `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` response headers.
+</Tip>
+
+## Pagination
+
+All list endpoints support cursor-free offset pagination via `page` and `per_page` query parameters. Results are returned in reverse-chronological order by default.
+
+```
+GET /v1/meetings?page=1&per_page=20
+```
+
+Paginated responses include a `meta.pagination` object:
+
+```json
+{
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "per_page": 20,
+      "total": 143,
+      "total_pages": 8
+    }
+  }
+}
+```
+
+## Official SDKs
+
+If you prefer not to call the REST API directly, Progress Pilot publishes official SDKs for Python and Node.js. Both SDKs are fully typed, handle authentication and retries automatically, and mirror the REST API structure.
+
+<CardGroup cols={2}>
+  <Card title="Python SDK" icon="python" href="https://docs.progresspilot.ai/sdk/python">
+    Install with `pip install progresspilot`. Supports async/await via `httpx`.
+  </Card>
+  <Card title="Node.js SDK" icon="node-js" href="https://docs.progresspilot.ai/sdk/node">
+    Install with `npm install progresspilot`. First-class TypeScript support included.
+  </Card>
+</CardGroup>
+
+## Explore the API
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api-reference/authentication">
+    Learn how to generate API keys and authenticate every request.
+  </Card>
+  <Card title="Agents" icon="robot" href="/api-reference/agents">
+    Trigger AI agent tasks like meeting summarization and process scans.
+  </Card>
+  <Card title="Meetings" icon="video" href="/api-reference/meetings">
+    Start sessions, retrieve transcripts, summaries, and action items.
+  </Card>
+  <Card title="Reports" icon="chart-bar" href="/api-reference/reports">
+    Generate, schedule, and retrieve operational reports in multiple formats.
+  </Card>
+  <Card title="Tasks" icon="list-check" href="/api-reference/tasks">
+    List, update, and manage action items extracted from meetings.
+  </Card>
+</CardGroup>

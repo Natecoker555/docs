@@ -1,0 +1,236 @@
+---
+title: "Connect Slack, Teams, and Email to Progress Pilot"
+sidebarTitle: "Communication Tools"
+description: "Route meeting summaries, action items, reports, and agent alerts to Slack channels, Microsoft Teams, or email recipients with Progress Pilot's communication integrations."
+---
+
+Progress Pilot generates structured outputs — meeting summaries, action item lists, weekly reports, escalation alerts, and strategic briefings — but those outputs only create value when they reach the right people at the right time. The communication integrations let you route every output type to wherever your team actually pays attention, whether that is a Slack channel, a Teams tab, or a carefully crafted email digest. You can configure multiple destinations simultaneously, so a single meeting summary might post to Slack, get emailed to executives, and drop into a Teams channel for a cross-functional partner team.
+
+## Slack Integration
+
+Connecting Slack is the most common starting point for Progress Pilot customers. Once connected, the agent can post to any public or private channel it has been invited to, deliver interactive messages with expand/collapse action item lists, and respond to slash commands from any team member.
+
+### What the Slack Integration Does
+
+- Posts meeting summaries to designated channels immediately after a call ends
+- Delivers weekly and ad-hoc reports to ops, leadership, or team-specific channels
+- Sends real-time alerts when the agent detects blockers, missed deadlines, or escalation triggers
+- Responds to slash commands for on-demand summaries, reports, and priority lists
+- Threads replies intelligently so channels stay organized even with high output volume
+
+### Connecting Slack
+
+<Steps>
+  <Step title="Open Slack Integration Settings">
+    Go to **Settings → Integrations → Slack** in Progress Pilot. You will see a summary of the permissions the Slack app will request, including channel posting and slash command registration.
+  </Step>
+  <Step title="Click Add to Slack">
+    Click **Add to Slack**. You will be redirected to Slack's OAuth authorization screen. Select the Slack workspace you want to connect from the dropdown — if you manage multiple workspaces, make sure you select the correct one.
+  </Step>
+  <Step title="Authorize the App">
+    Review the requested permissions and click **Allow**. Slack will redirect you back to Progress Pilot with a confirmation that the workspace is connected. The Progress Pilot bot will appear in your Slack workspace's Apps section.
+  </Step>
+  <Step title="Invite the Bot to Channels">
+    For Progress Pilot to post to private channels, you need to invite the bot explicitly. In each target channel, type `/invite @progresspilot` and press Enter. The bot can post to public channels without an explicit invite.
+  </Step>
+  <Step title="Configure Channel Mapping">
+    Return to **Settings → Integrations → Slack → Channel Mapping** and assign each output type to a channel. See the Channel Mapping section below for details.
+  </Step>
+</Steps>
+
+### Channel Mapping
+
+Channel mapping lets you route different output types to different Slack channels rather than flooding a single channel with all agent activity. Configure your mappings in **Settings → Integrations → Slack → Channel Mapping**:
+
+| Output Type | Suggested Channel | Notes |
+|-------------|------------------|-------|
+| Meeting summaries | `#meeting-notes` | Posted within 2 minutes of call end |
+| Weekly ops reports | `#ops-reports` | Posted on your configured report schedule |
+| Action item digests | `#action-items` | Daily digest of open and newly created items |
+| Escalation alerts | `#ops-alerts` | Real-time, high-priority notifications |
+| Executive briefings | `#leadership` | Restricted channel for senior stakeholders |
+
+You can map multiple output types to the same channel, or leave a type unmapped — unmapped output types are delivered as in-app notifications in Progress Pilot only.
+
+### Slack Slash Commands
+
+Once Progress Pilot is connected to your workspace, any team member can use the following slash commands from any channel or DM:
+
+| Command | What It Returns |
+|---------|----------------|
+| `/pp summary` | The most recent meeting summary from your last call |
+| `/pp summary [meeting name]` | Summary for a specific named meeting |
+| `/pp report` | The most recent weekly ops report |
+| `/pp priorities` | Your top 5 open action items ranked by urgency |
+| `/pp status [project name]` | Current health status for a named project |
+| `/pp join` | Triggers the agent to join your current active meeting |
+
+### Example Slack Message Format
+
+Meeting summary posts in Slack follow a consistent, scannable format:
+
+```
+📋 *Meeting Summary — Q1 Planning Sync*
+📅 Thursday, Jan 16, 2025 · 45 min · 8 attendees
+
+*Key Decisions*
+• Approved $240K budget increase for infrastructure team
+• Q1 OKRs finalized — shipping to all team leads by Friday
+• Design review cycle shortened from 2 weeks to 1 week starting Feb 1
+
+*Action Items*
+☐ @sarah — Share updated OKR doc with leadership by Jan 17
+☐ @marcus — Schedule infrastructure capacity review for week of Jan 20
+☐ @priya — Revise design review SLA and post to Notion by Jan 19
+
+*Next Meeting*
+📅 Q1 Planning Follow-up — Monday, Jan 20 at 10:00 AM
+
+_View full summary → https://app.progresspilot.com/summaries/sum_01hx9k_
+```
+
+<Tip>
+  Establish a consistent naming convention for your Progress Pilot output channels before connecting. Channels prefixed with `pp-` or `ops-` (e.g., `#pp-meeting-notes`, `#ops-weekly-report`) make it easy for new team members to find agent outputs and for admins to audit what the agent is posting. You can also archive these channels independently of your main team channels when reviewing historical outputs.
+</Tip>
+
+---
+
+## Microsoft Teams Integration
+
+The Microsoft Teams integration mirrors the Slack integration in functionality and follows the same OAuth-based authorization model. If your organization uses Teams as its primary communication platform, Progress Pilot delivers the same structured outputs — summaries, reports, action item digests, and alerts — directly to your Teams channels.
+
+### Connecting Microsoft Teams
+
+<Steps>
+  <Step title="Open Teams Integration Settings">
+    Go to **Settings → Integrations → Microsoft Teams**. Note that connecting Teams requires either a Microsoft 365 personal account or an organizational account — your IT administrator may need to pre-approve the Progress Pilot app in your Azure Active Directory tenant.
+  </Step>
+  <Step title="Click Connect Microsoft Teams">
+    Click **Connect Microsoft Teams**. You will be redirected to Microsoft's OAuth consent screen. Sign in with your Microsoft 365 account and review the requested permissions.
+  </Step>
+  <Step title="Grant Permissions">
+    Click **Accept** to grant Progress Pilot permission to post messages and read channel metadata. If your tenant requires admin consent, you will see an option to request approval from your IT administrator directly from the consent screen.
+  </Step>
+  <Step title="Select Your Team and Channels">
+    After authorization, return to **Settings → Integrations → Microsoft Teams → Channel Mapping** and select which Teams team and channels should receive each output type.
+  </Step>
+</Steps>
+
+### Teams Channel Routing
+
+Channel routing in Teams works identically to Slack's channel mapping. Assign each output type (meeting summaries, reports, alerts, briefings) to a specific Teams channel in **Settings → Integrations → Microsoft Teams → Channel Mapping**.
+
+Progress Pilot posts to Teams using **Adaptive Cards**, which render as rich, visually structured messages with expandable sections, action buttons, and formatted tables — not plain text walls. Meeting summaries display collapsed by default, with a **View Full Summary** button that expands the full content inline in the Teams client without navigating away.
+
+---
+
+## Email Delivery
+
+For stakeholders who prefer email — executives, external partners, board members — Progress Pilot can deliver any output type as a formatted email. Email delivery works independently of Slack and Teams, and you can use all three simultaneously.
+
+### Configuring Email Recipients
+
+In **Settings → Integrations → Email**, you can configure a recipient list for each output type:
+
+- **Per output type** — Different people can receive different reports. Your weekly ops report might go to your VP of Operations and the CEO; meeting summaries might go only to meeting attendees; escalation alerts might go to a broader on-call distribution list.
+- **Distribution lists** — You can enter individual email addresses or organizational distribution list addresses (e.g., `ops-team@yourcompany.com`).
+- **HTML and plain text** — Progress Pilot sends emails in both HTML and plain-text MIME parts. Email clients that render HTML receive a fully formatted version with tables, bold text, and progress indicators. Plain text clients receive a clean, readable version with consistent indentation.
+
+### Unsubscribe Management
+
+Every email sent by Progress Pilot includes a one-click unsubscribe link in the footer. Clicking it removes that recipient from all Progress Pilot email delivery for the connected workspace — it does not affect their in-app access or Slack notifications. Admins can view and manage the unsubscribe list in **Settings → Integrations → Email → Unsubscribe List** and can re-add a recipient manually if needed.
+
+---
+
+## Side-by-Side Configuration
+
+<Tabs>
+  <Tab title="Slack">
+    **Setup path:** Settings → Integrations → Slack
+
+    **Auth method:** OAuth 2.0 (workspace-level)
+
+    **Message format:** Block Kit rich messages with expandable sections
+
+    **Channel mapping:** Granular per output type; supports public and private channels
+
+    **Slash commands:** `/pp summary`, `/pp report`, `/pp priorities`, `/pp status`, `/pp join`
+
+    **Bot invite required for private channels:** Yes — type `/invite @progresspilot` in the channel
+
+    **Notification threading:** Yes — replies thread under the original summary post
+
+    **Supports emoji reactions for acknowledgment:** Yes — team members can react with ✅ to mark summaries as reviewed
+
+    ```json
+    {
+      "provider": "slack",
+      "channel_mapping": {
+        "meeting_summary": "C04XK2PQRST",
+        "weekly_report": "C04XK2PQABC",
+        "escalation_alert": "C04XK2PQDEF"
+      },
+      "thread_replies": true,
+      "include_action_items": true
+    }
+    ```
+  </Tab>
+  <Tab title="Microsoft Teams">
+    **Setup path:** Settings → Integrations → Microsoft Teams
+
+    **Auth method:** OAuth 2.0 (Microsoft 365 / Azure AD)
+
+    **Message format:** Adaptive Cards with expandable sections and action buttons
+
+    **Channel mapping:** Per output type; requires team and channel selection
+
+    **Admin consent:** May be required by your Azure AD tenant policy
+
+    **Notification threading:** Yes — replies are posted in the same thread
+
+    **Supports @mention on action item assignments:** Yes — assignees are @mentioned in the action items card
+
+    ```json
+    {
+      "provider": "microsoft_teams",
+      "team_id": "19:abc123def456@thread.tacv2",
+      "channel_mapping": {
+        "meeting_summary": "19:channelid1@thread.tacv2",
+        "weekly_report": "19:channelid2@thread.tacv2",
+        "escalation_alert": "19:channelid3@thread.tacv2"
+      },
+      "adaptive_cards": true,
+      "mention_assignees": true
+    }
+    ```
+  </Tab>
+  <Tab title="Email">
+    **Setup path:** Settings → Integrations → Email
+
+    **Auth method:** None required — uses Progress Pilot's sending infrastructure
+
+    **Message format:** Responsive HTML with plain-text fallback
+
+    **Recipient configuration:** Per output type; individual addresses or distribution lists
+
+    **Unsubscribe management:** One-click per recipient; admin-managed override list
+
+    **Custom sender name:** Configurable (e.g., "Progress Pilot at Acme Corp")
+
+    **Custom reply-to address:** Configurable — replies go to a team inbox, not Progress Pilot
+
+    ```json
+    {
+      "provider": "email",
+      "sender_name": "Progress Pilot at Acme Corp",
+      "reply_to": "ops-team@acmecorp.com",
+      "recipients": {
+        "meeting_summary": ["ops@acmecorp.com"],
+        "weekly_report": ["vp-ops@acmecorp.com", "ceo@acmecorp.com"],
+        "escalation_alert": ["on-call@acmecorp.com"]
+      },
+      "format": "html"
+    }
+    ```
+  </Tab>
+</Tabs>

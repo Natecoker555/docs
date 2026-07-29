@@ -1,0 +1,225 @@
+---
+title: "REST API Endpoints for Agent Tasks"
+sidebarTitle: "Agents"
+description: "Trigger and monitor Progress Pilot AI agent tasks via the REST API. Supports summarize_meeting, process_improvement_scan, broadcast_update, and more."
+---
+
+The Agents API is the core execution layer of Progress Pilot. You use it to trigger AI agent tasks — such as summarizing a meeting, scanning a team's workflows for inefficiencies, or broadcasting a status update — and to track those tasks through to completion. Because agent tasks are processed asynchronously, the API returns a `task_id` immediately upon submission. You can then poll the task status endpoint or provide a `webhook_url` to receive the result pushed to your server when processing finishes.
+
+## Available Task Types
+
+| Task Type | Description |
+|---|---|
+| `summarize_meeting` | Generates a structured summary, key decisions, and action items from a recorded meeting. |
+| `process_improvement_scan` | Analyzes team activity and communication patterns to surface bottlenecks and improvement opportunities. |
+| `broadcast_update` | Composes and distributes a status update across configured channels (email, Slack, Teams). |
+| `generate_report` | Produces a formatted operational report for a given scope and time period. |
+| `sync_priorities` | Reconciles action items and priorities across connected project management systems. |
+
+---
+
+## Trigger an Agent Task
+
+<api-endpoint method="POST" url="https://api.progresspilot.ai/v1/agents/run" />
+
+Submits an agent task for asynchronous processing. The response is returned immediately with a `task_id` and an estimated completion time. Use the `task_id` to poll status or rely on your `webhook_url` to receive the result automatically.
+
+### Request Body
+
+<ParamField body="task" type="string" required>
+  The type of agent task to run. Must be one of: `summarize_meeting`, `process_improvement_scan`, `broadcast_update`, `generate_report`, `sync_priorities`.
+</ParamField>
+
+<ParamField body="context" type="object" required>
+  Task-specific context data. The required keys within `context` vary by task type. For example, `summarize_meeting` requires a `meeting_id`, while `broadcast_update` requires a `message` and a `channels` array.
+</ParamField>
+
+<ParamField body="webhook_url" type="string">
+  A publicly accessible URL on your server. Progress Pilot will send a `POST` request to this URL when the task completes, with the full result payload in the request body. If omitted, you must poll `GET /v1/agents/tasks/{task_id}` to retrieve the result.
+</ParamField>
+
+<ParamField body="priority" type="string">
+  Execution priority for the task. Accepted values: `normal` (default) or `high`. High-priority tasks are placed at the front of the processing queue and are subject to additional rate limits on Standard plans.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/agents/run \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "summarize_meeting",
+    "context": {
+      "meeting_id": "meet_abc123",
+      "output_format": "detailed"
+    },
+    "webhook_url": "https://yourapp.com/webhooks/progress-pilot"
+  }'
+```
+
+### Response — 201 Created
+
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "task_xyz789",
+    "status": "processing",
+    "task": "summarize_meeting",
+    "created_at": "2024-10-15T10:00:00Z",
+    "estimated_completion": "2024-10-15T10:00:30Z"
+  },
+  "meta": {
+    "request_id": "req_def456",
+    "timestamp": "2024-10-15T10:00:00Z"
+  }
+}
+```
+
+<ResponseField name="data.task_id" type="string">
+  The unique identifier for this task. Store this to poll for status or correlate webhook callbacks.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Initial task status. Will be `queued` or `processing` immediately after submission.
+</ResponseField>
+
+<ResponseField name="data.estimated_completion" type="string">
+  An ISO 8601 timestamp estimating when the task result will be available. Actual completion may vary based on queue depth.
+</ResponseField>
+
+<Tip>
+  If you provide a `webhook_url`, Progress Pilot sends the complete result payload to your endpoint via `POST` when the task finishes — no polling required. Respond with any `2xx` status to acknowledge delivery.
+</Tip>
+
+---
+
+## Get Task Status
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/agents/tasks/{task_id}" />
+
+Retrieves the current status and, if complete, the full result of an agent task.
+
+### Path Parameters
+
+<ParamField path="task_id" type="string" required>
+  The `task_id` returned when the task was submitted via `POST /v1/agents/run`.
+</ParamField>
+
+### Task Status Values
+
+| Status | Description |
+|---|---|
+| `queued` | The task has been accepted and is waiting for an available agent worker. |
+| `processing` | An agent is actively working on the task. |
+| `completed` | The task finished successfully. The `result` object is populated. |
+| `failed` | The task encountered an unrecoverable error. The `error` object explains why. |
+
+### Example Response — Completed Task
+
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "task_xyz789",
+    "status": "completed",
+    "task": "summarize_meeting",
+    "created_at": "2024-10-15T10:00:00Z",
+    "completed_at": "2024-10-15T10:00:28Z",
+    "result": {
+      "summary": "The team aligned on Q4 roadmap priorities and confirmed the November 1st launch target...",
+      "key_decisions": [
+        "Launch date confirmed as November 1st.",
+        "Design review moved to October 22nd."
+      ],
+      "action_items": [
+        {
+          "title": "Send updated roadmap draft",
+          "assignee": "james.park@company.com",
+          "due_date": "2024-10-17"
+        }
+      ]
+    }
+  },
+  "meta": {
+    "request_id": "req_ghi789",
+    "timestamp": "2024-10-15T10:01:00Z"
+  }
+}
+```
+
+<ResponseField name="data.result" type="object">
+  Present only when `status` is `completed`. Contains the full structured output of the agent task. The shape of `result` varies by task type.
+</ResponseField>
+
+---
+
+## List All Tasks
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/agents/tasks" />
+
+Returns a paginated list of all agent tasks for your account, ordered by `created_at` descending. Filter results using the query parameters below.
+
+### Query Parameters
+
+<ParamField query="status" type="string">
+  Filter by task status. One of: `queued`, `processing`, `completed`, `failed`.
+</ParamField>
+
+<ParamField query="task_type" type="string">
+  Filter by task type, e.g. `summarize_meeting` or `process_improvement_scan`.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page number to retrieve. Defaults to `1`.
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Number of tasks per page. Defaults to `20`. Maximum is `100`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.progresspilot.ai/v1/agents/tasks?status=completed&task_type=summarize_meeting&page=1&per_page=10" \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "task_id": "task_xyz789",
+      "status": "completed",
+      "task": "summarize_meeting",
+      "created_at": "2024-10-15T10:00:00Z",
+      "completed_at": "2024-10-15T10:00:28Z"
+    },
+    {
+      "task_id": "task_uvw456",
+      "status": "completed",
+      "task": "summarize_meeting",
+      "created_at": "2024-10-14T14:30:00Z",
+      "completed_at": "2024-10-14T14:30:22Z"
+    }
+  ],
+  "meta": {
+    "request_id": "req_jkl012",
+    "timestamp": "2024-10-15T11:00:00Z",
+    "pagination": {
+      "page": 1,
+      "per_page": 10,
+      "total": 38,
+      "total_pages": 4
+    }
+  }
+}
+```
+
+<Note>
+  The list response does not include the `result` object for completed tasks to keep payloads compact. Fetch the full result by calling `GET /v1/agents/tasks/{task_id}` for a specific task.
+</Note>

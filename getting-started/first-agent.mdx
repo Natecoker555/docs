@@ -1,0 +1,199 @@
+---
+title: "Run Your First AI Agent Task with Progress Pilot"
+sidebarTitle: "First Agent Task"
+description: "Create and run your first Progress Pilot AI agent task, from choosing a task type to reviewing results and routing outputs to your team."
+---
+
+Progress Pilot agent tasks are the core unit of work in the platform. Each task is a discrete, AI-powered operation — from summarizing a meeting to generating a cross-team status report — that runs against your connected data sources and returns structured, actionable results. This guide walks you through choosing a task type, triggering your first task using whichever method suits your workflow, reviewing the output, and routing that output to the right people on your team.
+
+## Three Ways to Run an Agent Task
+
+Every Progress Pilot task can be triggered in three ways. Choose the approach that best fits your use case:
+
+- **Dashboard UI** — the fastest way to run a task manually. Ideal for one-off requests, experimentation, and teams who prefer a visual interface.
+- **API** — programmatic access for custom integrations, scripts, and CI/CD pipelines. Gives you full control over task parameters and output handling.
+- **Scheduled Triggers** — configure tasks to run automatically on a recurring schedule. Perfect for daily standups, weekly reports, and routine governance checks.
+
+<Tabs>
+  <Tab title="Dashboard">
+    The dashboard provides a guided, no-code experience for running any agent task.
+
+    1. Log in to [app.progresspilot.ai](https://app.progresspilot.ai) and navigate to **Agent Tasks** in the left sidebar.
+    2. Click **New Task** in the top-right corner.
+    3. Select a **Task Type** from the catalog (see [Available Task Types](#available-task-types) below).
+    4. Fill in the task context fields. For example, a `summarize_meeting` task will ask you to select a meeting from your connected Google Calendar or upload a transcript file.
+    5. Choose your **Output Format**: `brief`, `detailed`, or `executive`.
+    6. Optionally, configure **Output Routing** to send results to a Slack channel, email address, or Jira project automatically upon completion.
+    7. Click **Run Task**.
+
+    The task appears in the **Agent Tasks** list with a `processing` status indicator. Results are typically ready within 15–60 seconds depending on the task type and data volume. Click the task row to open the full result view.
+  </Tab>
+
+  <Tab title="API">
+    Use the Progress Pilot REST API to trigger tasks programmatically. All requests require a valid API key passed as a Bearer token.
+
+    The example below triggers a meeting summary task:
+
+    ```bash
+    curl -X POST https://api.progresspilot.ai/v1/agents/run \
+      -H "Authorization: Bearer ppk_live_your_api_key" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "task": "summarize_meeting",
+        "context": {
+          "meeting_id": "meet_abc123",
+          "output_format": "detailed"
+        }
+      }'
+    ```
+
+    The API responds immediately with a task object:
+
+    ```json
+    {
+      "task_id": "task_xyz789",
+      "status": "processing",
+      "estimated_completion": "30s",
+      "result_webhook": "https://api.progresspilot.ai/v1/tasks/task_xyz789"
+    }
+    ```
+
+    Poll the `result_webhook` URL to check for completion:
+
+    ```bash
+    curl -X GET https://api.progresspilot.ai/v1/tasks/task_xyz789 \
+      -H "Authorization: Bearer ppk_live_your_api_key"
+    ```
+
+    When the task finishes, the response `status` changes to `completed` and a `result` object is included in the payload containing the full agent output.
+
+    <Info>
+      For production workloads, prefer webhooks over polling to minimize latency and API call volume. See [Routing Output to Your Team](#routing-output-to-your-team) for setup instructions.
+    </Info>
+  </Tab>
+
+  <Tab title="Scheduled">
+    Scheduled triggers allow you to run any agent task on a recurring cadence without manual intervention. Define a schedule via the API using a cron expression.
+
+    The example below schedules a `generate_report` task to run every Monday at 8:00 AM UTC:
+
+    ```bash
+    curl -X POST https://api.progresspilot.ai/v1/schedules \
+      -H "Authorization: Bearer ppk_live_your_api_key" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Weekly Ops Report",
+        "task": "generate_report",
+        "context": {
+          "report_type": "weekly_ops",
+          "output_format": "executive",
+          "teams": ["engineering", "product", "design"]
+        },
+        "schedule": {
+          "cron": "0 8 * * 1",
+          "timezone": "UTC"
+        },
+        "routing": {
+          "slack_channel": "#ops-reports",
+          "email": ["ops-lead@acme.com"]
+        }
+      }'
+    ```
+
+    The API returns a schedule object with a unique `schedule_id`. You can view, pause, or delete all active schedules in **Settings → Scheduled Tasks** or via the `/v1/schedules` endpoint.
+
+    <Note>
+      Scheduled tasks use your workspace's default time zone unless you explicitly specify a `timezone` in the schedule object. Accepted values follow the IANA time zone database format (e.g., `America/New_York`, `Europe/London`).
+    </Note>
+  </Tab>
+</Tabs>
+
+## Available Task Types
+
+Progress Pilot ships with a curated set of agent task types designed for common operations workflows. Each task type accepts a `context` object with task-specific parameters — see the individual task reference pages for full schema details.
+
+<CardGroup cols={2}>
+  <Card title="summarize_meeting" icon="clipboard-list" href="/meetings/summaries">
+    Produces a full meeting breakdown including an executive summary, verbatim highlights, decision log, and a prioritized list of action items with owner assignments.
+  </Card>
+  <Card title="process_improvement_scan" icon="magnifying-glass-chart" href="/operations/process-improvements">
+    Analyzes workflow data from your connected tools to surface bottlenecks, repeated inefficiencies, and prioritized improvement recommendations.
+  </Card>
+  <Card title="generate_report" icon="chart-bar" href="/operations/reporting">
+    Synthesizes data across teams and time periods into a structured status report — weekly ops updates, sprint retrospectives, executive briefings, and more.
+  </Card>
+  <Card title="sync_priorities" icon="arrows-rotate" href="/operations/strategic-priorities">
+    Aligns team OKRs and project priorities by comparing objectives across Jira, Google Docs, and other connected sources and flagging misalignments for review.
+  </Card>
+</CardGroup>
+
+## Reviewing Results
+
+Once a task completes, you can access its results in three ways:
+
+**Dashboard**
+
+Navigate to **Agent Tasks** and click on the completed task row. The result view displays the full agent output with formatted sections, expandable detail panels, and a copy-to-clipboard button. Use the **Export** dropdown to download results as PDF, Markdown, or JSON.
+
+**Webhook**
+
+If you configured a webhook endpoint, Progress Pilot sends an HTTP `POST` request to your URL immediately upon task completion. The payload includes the full task result nested under the `result` key:
+
+```json
+{
+  "event": "task.completed",
+  "task_id": "task_xyz789",
+  "task": "summarize_meeting",
+  "completed_at": "2025-01-15T09:32:14Z",
+  "result": {
+    "summary": "...",
+    "action_items": [...],
+    "decisions": [...]
+  }
+}
+```
+
+**API Poll**
+
+Send a `GET` request to the task's `result_webhook` URL using your API key at any time after task creation to retrieve the current status and, once complete, the full result payload.
+
+## Routing Output to Your Team
+
+Agent task results are most valuable when they reach the right people automatically. Progress Pilot supports three routing destinations, configurable per task or per schedule.
+
+**Slack**
+
+Specify a `slack_channel` in the `routing` object of your API request or when creating a task in the dashboard. Progress Pilot will post a formatted message to that channel with a summary and a link to the full result in the dashboard.
+
+```json
+"routing": {
+  "slack_channel": "#weekly-ops"
+}
+```
+
+**Email**
+
+Provide one or more email addresses in the `routing.email` array. Recipients receive a formatted HTML email containing the agent output and a link to the full result view.
+
+```json
+"routing": {
+  "email": ["manager@acme.com", "exec@acme.com"]
+}
+```
+
+**Jira**
+
+Route task results directly to a Jira project by specifying a `jira_project_key`. Progress Pilot creates a new issue in that project with the task output attached as the issue description and any extracted action items added as sub-tasks.
+
+```json
+"routing": {
+  "jira_project_key": "OPS",
+  "jira_issue_type": "Task"
+}
+```
+
+You can combine routing destinations — for example, post to a Slack channel and create a Jira issue simultaneously — by populating multiple keys in the `routing` object.
+
+<Tip>
+  Set up a webhook endpoint in **Settings → Webhooks** to enable real-time delivery of task results to any custom system — your own application, a data warehouse, or a third-party automation platform like Zapier or Make. Webhooks fire within seconds of task completion and are far more efficient than polling for high-volume workflows.
+</Tip>

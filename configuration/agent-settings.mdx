@@ -1,0 +1,89 @@
+---
+title: "Configure Your Progress Pilot AI Agent Behavior"
+sidebarTitle: "Agent Settings"
+description: "Customize how the Progress Pilot agent behaves — set task defaults, configure output formats, tune language preferences, and adjust agent autonomy levels."
+---
+
+Progress Pilot gives you fine-grained control over how your AI agent operates across every workflow it touches. Whether you want terse executive-ready summaries, automatic routing of action items into your project tracker, or a fully hands-off autonomous pipeline, the agent settings panel is where you shape that behavior. Taking a few minutes to dial in these settings at the start will save your team significant back-and-forth as the agent learns the rhythm of your operations.
+
+## Where to Find Agent Settings
+
+All agent configuration lives in **Settings → Agent Configuration** in the Progress Pilot dashboard. Changes you make here apply workspace-wide by default, though individual teams can override them — more on that in [Per-Team Overrides](#per-team-overrides).
+
+## Core Settings Reference
+
+The table below covers every configurable option in the Agent Configuration panel.
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `default_summary_format` | enum | `standard` | Controls summary verbosity for meetings and reports. Options: `brief`, `standard`, `detailed`. |
+| `language` | string | `en` | Language used for all agent-generated outputs. Accepts BCP 47 language tags (e.g. `fr`, `de`, `ja`). |
+| `timezone` | string | `UTC` | Timezone applied to all timestamps in reports, summaries, and action items. Accepts IANA timezone strings (e.g. `America/New_York`). |
+| `auto_join_meetings` | boolean | `false` | When enabled, the agent automatically joins every meeting on connected calendars without requiring a manual invite. |
+| `action_item_routing` | enum | `none` | Destination for detected action items. Options: `none`, `jira`, `asana`, `linear`. Requires the corresponding integration to be connected. |
+| `report_format` | enum | `pdf` | Default export format for generated reports. Options: `pdf`, `docx`, `html`, `markdown`. |
+| `max_task_concurrency` | integer | `5` | Maximum number of agent tasks allowed to run in parallel. Increase this for high-volume workspaces; reduce it to throttle resource usage. |
+
+## Autonomy Levels
+
+Progress Pilot supports three levels of agent autonomy. You can set the workspace default and override it per team or per workflow.
+
+<CardGroup cols={3}>
+  <Card title="Manual" icon="hand">
+    The agent prepares every action and waits for explicit human approval before executing. Best for teams new to AI-assisted operations or in highly regulated environments.
+  </Card>
+  <Card title="Semi-Auto" icon="circle-half-stroke">
+    The agent acts immediately but surfaces every completed action in a review queue. Humans can revert, edit, or escalate within a configurable window. This is the recommended starting point for most workspaces.
+  </Card>
+  <Card title="Auto" icon="bolt">
+    The agent executes all tasks end-to-end without pausing for review. Optimized for mature, high-trust workflows where speed matters most.
+  </Card>
+</CardGroup>
+
+<Warning>
+**Use Auto mode with caution.** In fully autonomous mode, the agent will create tickets, send reports, and route action items without any human checkpoint. If your integrations or routing rules are misconfigured, errors can propagate quickly. We strongly recommend running in **Semi-Auto** mode for at least two weeks when onboarding a new workspace, and only switching to Auto once you've validated the agent's output quality.
+</Warning>
+
+## Per-Team Overrides
+
+If different teams in your organization have different needs, you can assign team-level agent settings that override the workspace defaults.
+
+<Steps>
+  <Step title="Open Team Management">
+    Navigate to **Settings → Teams** and select the team you want to configure.
+  </Step>
+  <Step title="Open Agent Overrides">
+    Click the **Agent Settings** tab on the team detail page. You'll see the current workspace defaults pre-filled.
+  </Step>
+  <Step title="Override Individual Settings">
+    Toggle the **Override** switch next to any setting you want to customize for this team. Only toggled fields will differ from the workspace default — the rest continue to inherit.
+  </Step>
+  <Step title="Save Changes">
+    Click **Save Team Settings**. Overrides take effect immediately for all members of that team.
+  </Step>
+</Steps>
+
+<Info>
+Per-team overrides support all core settings except `max_task_concurrency`, which is enforced at the workspace level for resource management reasons.
+</Info>
+
+## Updating Settings via API
+
+You can update agent settings programmatically using the Progress Pilot REST API. This is useful for scripted onboarding, infrastructure-as-code workflows, or syncing settings across multiple workspaces.
+
+```bash
+curl -X PATCH https://api.progresspilot.ai/v1/org/my-workspace/settings/agent \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_summary_format": "detailed",
+    "auto_join_meetings": true,
+    "action_item_routing": "jira"
+  }'
+```
+
+The API accepts a partial payload — you only need to include the fields you want to change. Fields omitted from the request body are left unchanged. A successful request returns a `200 OK` response with the full updated settings object.
+
+<Tip>
+Start with **Semi-Auto** mode and `default_summary_format: standard`, then revisit after your first two weeks. Most teams find that once they see what the agent produces, they naturally tune verbosity up or down — and earning trust in the output is the best path to confidently enabling Auto mode later.
+</Tip>

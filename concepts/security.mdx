@@ -1,0 +1,146 @@
+---
+title: "Security Architecture and Controls in Progress Pilot"
+sidebarTitle: "Security"
+description: "Understand Progress Pilot's security model, including data encryption, access controls, authentication methods, audit logging, and compliance certifications."
+---
+
+Security is not an afterthought in Progress Pilot — it is a foundational design principle that shapes every layer of the platform, from how credentials are stored to how the agent logs every action it takes. Because Progress Pilot connects to your most sensitive operational systems — calendars, project trackers, databases, and communication channels — the platform is built to the standard that enterprise security teams require: strong encryption, granular access controls, comprehensive audit trails, and formal compliance certifications. This page gives you a complete picture of the security architecture and tells you exactly what controls are available at each plan tier.
+
+## Authentication
+
+Progress Pilot supports multiple authentication methods to match your organization's identity infrastructure.
+
+<Tabs>
+  <Tab title="API Keys">
+    API keys are used for programmatic access to the Progress Pilot API — for example, triggering agent tasks from your CI/CD pipeline or registering custom tools. Each key is:
+
+    - Scoped to a single workspace
+    - Assigned to a role at creation time (the key inherits that role's permissions)
+    - Prefixed with `ppk_live_` (production) or `ppk_test_` (sandbox) for easy identification
+    - Revocable at any time from **Settings → API Keys**
+
+    API keys are shown only once at creation. Store them in a secrets manager (e.g., Google Secret Manager, HashiCorp Vault) — never in source code or environment variables committed to version control.
+  </Tab>
+  <Tab title="OAuth 2.0 (Google)">
+    Human users authenticate via Google OAuth 2.0. Progress Pilot requests only the identity scopes needed to verify your email and workspace membership:
+
+    - `openid`
+    - `email`
+    - `profile`
+
+    No Google Drive, Calendar, or other data scopes are requested during user login. Those scopes are requested separately, per-tool, when you enable integrations. This ensures that authenticating a user grants no implicit access to your Google data.
+  </Tab>
+  <Tab title="SSO (Enterprise)">
+    Enterprise workspaces can enforce Single Sign-On via SAML 2.0. When SSO is enabled:
+
+    - All users must authenticate through your identity provider (IdP) — Google Workspace, Okta, Azure AD, and OneLogin are supported
+    - Email/password login and Google OAuth are automatically disabled
+    - User provisioning and deprovisioning can be managed via SCIM 2.0, ensuring that offboarded employees immediately lose access
+    - Session duration is configurable and can be synchronized with your IdP's session policy
+
+    To configure SSO, go to **Settings → Security → Single Sign-On** and follow the SAML 2.0 setup guide for your IdP.
+  </Tab>
+</Tabs>
+
+## Authorization: Role-Based Access Control
+
+Progress Pilot uses Role-Based Access Control (RBAC) to ensure that users can only access the features, data, and agent capabilities appropriate to their function. Every user in a workspace is assigned exactly one role.
+
+| Role | Description | Key Permissions |
+|---|---|---|
+| **Admin** | Full control over the workspace | Manage users, configure integrations, enable tools, view all audit logs, delete workspace |
+| **Manager** | Operational oversight and task management | Create and trigger tasks, configure automations, view all reports, manage team members |
+| **Contributor** | Day-to-day task execution | Trigger tasks within assigned scope, view and comment on reports, create action items |
+| **Viewer** | Read-only access | View reports and summaries, export data (subject to data classification rules) |
+
+<Info>
+  Role assignments are managed by Admins from **Settings → Users**. On Enterprise plans with SCIM provisioning, roles can be mapped to IdP groups, so role assignments are updated automatically when group membership changes in your identity provider.
+</Info>
+
+Permissions are enforced at every layer — the API, the dashboard UI, and the agent itself. Even if a Viewer-role API key is used to call a task-creation endpoint, the request is rejected before it reaches the agent.
+
+## Data Encryption
+
+All data in Progress Pilot is encrypted at every stage of its lifecycle.
+
+<CardGroup cols={2}>
+  <Card title="In Transit: TLS 1.3" icon="lock">
+    All data moving between your browser, your integrations, and Progress Pilot's infrastructure is encrypted using TLS 1.3. Older protocol versions (TLS 1.0, TLS 1.1, TLS 1.2) are disabled on all endpoints. Certificate management uses automated rotation via Google-managed certificates.
+  </Card>
+  <Card title="At Rest: AES-256" icon="database">
+    All stored data — transcripts, reports, workspace configuration, integration credentials — is encrypted at rest using AES-256. Encryption keys are managed by Google Cloud Key Management Service (KMS) and are rotated on a 90-day schedule.
+  </Card>
+  <Card title="Credential Storage" icon="key">
+    OAuth tokens and API credentials for connected integrations are stored encrypted in a dedicated secrets store, isolated from operational data. They are never logged, never included in error messages, and never returned by any API endpoint.
+  </Card>
+  <Card title="Backup Encryption" icon="shield">
+    All database backups are encrypted with the same AES-256 standard as live data. Backups are stored in a separate Google Cloud region from your primary data and are subject to the same retention and deletion policies.
+  </Card>
+</CardGroup>
+
+## Network Security
+
+<Steps>
+  <Step title="IP Allowlisting">
+    You can restrict API access to a list of approved IP addresses or CIDR ranges from **Settings → Security → IP Allowlist**. When an allowlist is configured, any API request originating from an IP address not on the list is rejected with a `403 Forbidden` response — regardless of whether the request carries a valid API key.
+  </Step>
+  <Step title="VPC Peering (Enterprise)">
+    Enterprise customers can establish a VPC peering connection between their Google Cloud or AWS VPC and Progress Pilot's infrastructure. This routes all traffic between your systems and Progress Pilot over private networking — no data traverses the public internet. VPC peering is configured during Enterprise onboarding.
+  </Step>
+  <Step title="Egress Controls">
+    Outbound connections from the Progress Pilot agent to your connected integrations originate from a fixed set of static IP addresses. You can add these addresses to your firewall allowlists to ensure that only legitimate Progress Pilot traffic reaches your internal systems. The current egress IP list is available at **Settings → Security → Egress IPs**.
+  </Step>
+</Steps>
+
+## Audit Logging
+
+Every action taken by the Progress Pilot agent — and every action taken by a user in the dashboard or via the API — is written to an immutable audit log. Each log entry contains:
+
+- **Timestamp** — ISO 8601 UTC timestamp of the event
+- **Actor** — the user ID or API key that triggered the action
+- **Task ID** — the unique identifier for the agent task (if applicable)
+- **Tool Used** — the name of the tool called by the agent (if applicable)
+- **Action Type** — the category of action (e.g., `task.created`, `tool.called`, `user.login`, `report.exported`)
+- **Outcome** — `success`, `failure`, or `partial`
+- **IP Address** — the originating IP of the request
+
+Audit logs are retained for 90 days on Starter and Pro plans, and for 365 days (or longer, by configuration) on Enterprise plans. Logs can be exported in JSON or CSV format, and Enterprise customers can configure real-time log streaming to their SIEM (e.g., Splunk, Datadog, Google Chronicle).
+
+## Compliance
+
+<CardGroup cols={2}>
+  <Card title="SOC 2 Type II" icon="certificate">
+    Progress Pilot maintains an active SOC 2 Type II certification, audited annually by an independent third-party auditor. The audit covers Security, Availability, and Confidentiality trust service criteria. You can request a copy of the most recent report under NDA from your account team.
+  </Card>
+  <Card title="GDPR-Ready" icon="shield-halved">
+    Progress Pilot is designed to support your GDPR obligations. You can export or delete all personal data associated with a user or workspace, configure data retention periods, and enable automatic PII masking in agent outputs. A Data Processing Agreement (DPA) is available for all customers.
+  </Card>
+  <Card title="HIPAA-Eligible (Enterprise)" icon="hospital">
+    Enterprise customers in healthcare can execute a Business Associate Agreement (BAA) with Progress Pilot, enabling use of the platform in workflows that involve Protected Health Information (PHI). HIPAA-eligible deployments include additional controls: enhanced audit logging, mandatory PII masking, and dedicated infrastructure.
+  </Card>
+  <Card title="Privacy Shield & SCCs" icon="globe">
+    For international data transfers, Progress Pilot relies on Standard Contractual Clauses (SCCs) as the legal mechanism for transferring personal data outside the EU/EEA. SCCs are included in the DPA available to all customers.
+  </Card>
+</CardGroup>
+
+<Note>
+  Data residency options — storing all your workspace data exclusively in the United States or the European Union — are available on Enterprise plans. If data residency is a requirement for your organization, raise it during the Enterprise onboarding process so that your workspace is provisioned in the correct region from the start. Migrating an existing workspace between regions requires a support-assisted process.
+</Note>
+
+## Security Incident Response
+
+If you discover or suspect a security vulnerability or incident involving Progress Pilot, report it immediately:
+
+- **Security issues:** [security@progresspilot.com](mailto:security@progresspilot.com)
+- **Production incidents affecting your workspace:** Open a P1 ticket via the [Support Portal](https://support.progresspilot.com) or contact your dedicated account manager
+
+**Response SLAs by severity:**
+
+| Severity | Definition | Initial Response | Resolution Target |
+|---|---|---|---|
+| **Critical** | Data breach, unauthorized access to customer data | 1 hour | 24 hours |
+| **High** | Service outage, authentication failure affecting multiple users | 4 hours | 48 hours |
+| **Medium** | Degraded functionality, non-data-impacting security finding | 1 business day | 7 days |
+| **Low** | Minor vulnerability, informational finding | 3 business days | 30 days |
+
+Progress Pilot will notify affected customers of any confirmed security incident within 72 hours of discovery, in accordance with GDPR Article 33 notification requirements and our own contractual commitments.

@@ -1,0 +1,287 @@
+---
+title: "REST API Endpoints for Reports"
+sidebarTitle: "Reports"
+description: "Generate, schedule, and retrieve operational reports via the Progress Pilot REST API. Supports PDF, JSON, HTML, and Google Docs delivery."
+---
+
+The Reports API lets you generate operational reports on demand, retrieve them in multiple formats, and set up recurring schedules so that the right people receive the right intelligence automatically. Reports draw on all data collected by Progress Pilot — meeting summaries, action item completion rates, cross-team coordination signals, and more — and can be scoped to a team, department, or your entire organization. Delivery channels include email, webhook, Google Docs, and direct API download.
+
+---
+
+## Generate a Report
+
+<api-endpoint method="POST" url="https://api.progresspilot.ai/v1/reports/generate" />
+
+Triggers asynchronous report generation. The report is queued immediately and typically ready within 30–60 seconds, depending on scope and complexity. Poll `GET /v1/reports/{id}` or use a webhook to receive the result.
+
+### Request Body
+
+<ParamField body="report_type" type="string" required>
+  The type of report to generate. Accepted values:
+  - `weekly_status` — high-level team status, decisions made, and open action items for the past week
+  - `team_performance` — individual and team-level output metrics and meeting engagement
+  - `cross_team_coordination` — dependency tracking and communication health across teams
+  - `meeting_efficiency` — meeting frequency, duration trends, and action item follow-through rates
+  - `custom` — free-form report driven by a natural language `prompt` in the `context` field
+</ParamField>
+
+<ParamField body="scope" type="string" required>
+  The organizational scope for the report. Accepted values: a team slug (e.g. `engineering`, `product`), a department name, or `organization` for a company-wide report.
+</ParamField>
+
+<ParamField body="period" type="string" required>
+  The time window the report covers. Accepted values: `last_7_days`, `last_30_days`, `last_90_days`, or a custom range object with `start` and `end` ISO 8601 timestamps.
+</ParamField>
+
+<ParamField body="delivery" type="object">
+  Delivery configuration for the report. If omitted, the report is only accessible via the API. The `delivery` object supports the following keys:
+  - `channels` (array) — one or more of: `email`, `webhook`, `google_docs`
+  - `recipients` (array) — email addresses to deliver the report to when `email` is a channel
+  - `webhook_url` (string) — URL to `POST` the report payload to when `webhook` is a channel
+  - `format` (string) — output format: `pdf` (default), `html`, `json`, `google_doc`
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/reports/generate \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "report_type": "weekly_status",
+    "scope": "engineering",
+    "period": "last_7_days",
+    "delivery": {
+      "channels": ["email"],
+      "recipients": ["cto@company.com"],
+      "format": "pdf"
+    }
+  }'
+```
+
+### Response — 201 Created
+
+```json
+{
+  "success": true,
+  "data": {
+    "report_id": "rpt_mno345",
+    "report_type": "weekly_status",
+    "scope": "engineering",
+    "period": "last_7_days",
+    "status": "generating",
+    "created_at": "2024-10-15T10:00:00Z",
+    "estimated_ready_at": "2024-10-15T10:01:00Z"
+  },
+  "meta": {
+    "request_id": "req_pqr678",
+    "timestamp": "2024-10-15T10:00:00Z"
+  }
+}
+```
+
+<ResponseField name="data.report_id" type="string">
+  The unique identifier for this report. Use it to check status and download the completed report.
+</ResponseField>
+
+<ResponseField name="data.status" type="string">
+  Initial report status. One of: `generating`, `ready`, `failed`.
+</ResponseField>
+
+---
+
+## Get Report Status and Content
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/reports/{id}" />
+
+Returns the current status of a report. When `status` is `ready`, the response includes a temporary signed `download_url` valid for 15 minutes.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `report_id` of the report to retrieve.
+</ParamField>
+
+### Example Response — Ready Report
+
+```json
+{
+  "success": true,
+  "data": {
+    "report_id": "rpt_mno345",
+    "report_type": "weekly_status",
+    "scope": "engineering",
+    "period": "last_7_days",
+    "status": "ready",
+    "format": "pdf",
+    "download_url": "https://storage.progresspilot.ai/reports/rpt_mno345.pdf?token=...",
+    "download_url_expires_at": "2024-10-15T10:16:00Z",
+    "created_at": "2024-10-15T10:00:00Z",
+    "completed_at": "2024-10-15T10:00:52Z",
+    "page_count": 4,
+    "delivery_status": {
+      "email": "delivered",
+      "recipients_delivered": ["cto@company.com"]
+    }
+  }
+}
+```
+
+<ResponseField name="data.download_url" type="string">
+  A pre-signed URL for direct file download. Valid for 15 minutes from the time of this API response. Request `GET /v1/reports/{id}` again to get a fresh URL if it expires.
+</ResponseField>
+
+<Warning>
+  The `download_url` is a temporary signed URL. Do not cache or share it beyond the `download_url_expires_at` timestamp — it will return a `403` once expired.
+</Warning>
+
+---
+
+## List All Reports
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/reports" />
+
+Returns a paginated list of all reports for your account, ordered by `created_at` descending.
+
+### Query Parameters
+
+<ParamField query="report_type" type="string">
+  Filter by report type, e.g. `weekly_status` or `team_performance`.
+</ParamField>
+
+<ParamField query="scope" type="string">
+  Filter by organizational scope, e.g. `engineering` or `organization`.
+</ParamField>
+
+<ParamField query="from" type="string">
+  ISO 8601 start date for filtering by `created_at`.
+</ParamField>
+
+<ParamField query="to" type="string">
+  ISO 8601 end date for filtering by `created_at`.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page number to retrieve. Defaults to `1`.
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Number of reports per page. Defaults to `20`. Maximum is `100`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.progresspilot.ai/v1/reports?report_type=weekly_status&scope=engineering&page=1&per_page=10" \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+---
+
+## Schedule a Recurring Report
+
+<api-endpoint method="POST" url="https://api.progresspilot.ai/v1/reports/schedule" />
+
+Creates a recurring report schedule. Progress Pilot will automatically generate and deliver the report at the specified frequency. Each generated report is stored and accessible via `GET /v1/reports`.
+
+### Request Body
+
+<ParamField body="report_type" type="string" required>
+  The type of report to generate on each run. Same accepted values as `POST /v1/reports/generate`.
+</ParamField>
+
+<ParamField body="scope" type="string" required>
+  The organizational scope for the report.
+</ParamField>
+
+<ParamField body="frequency" type="string" required>
+  How often the report should run. Accepted values: `daily`, `weekly`, `monthly`.
+</ParamField>
+
+<ParamField body="delivery" type="object" required>
+  Delivery configuration applied to every scheduled run. Same structure as the `delivery` object in `POST /v1/reports/generate`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/reports/schedule \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "report_type": "weekly_status",
+    "scope": "engineering",
+    "frequency": "weekly",
+    "delivery": {
+      "channels": ["email"],
+      "recipients": ["cto@company.com", "vp-eng@company.com"],
+      "format": "pdf"
+    }
+  }'
+```
+
+### Response — 201 Created
+
+```json
+{
+  "success": true,
+  "data": {
+    "schedule_id": "sched_stu901",
+    "report_type": "weekly_status",
+    "scope": "engineering",
+    "frequency": "weekly",
+    "next_run_at": "2024-10-21T09:00:00Z",
+    "created_at": "2024-10-15T10:00:00Z",
+    "delivery": {
+      "channels": ["email"],
+      "recipients": ["cto@company.com", "vp-eng@company.com"],
+      "format": "pdf"
+    }
+  }
+}
+```
+
+<ResponseField name="data.schedule_id" type="string">
+  The unique identifier for this schedule. Store it to manage or cancel the schedule later.
+</ResponseField>
+
+<ResponseField name="data.next_run_at" type="string">
+  ISO 8601 timestamp of the next scheduled report generation.
+</ResponseField>
+
+<Note>
+  Weekly schedules run every Monday at 9:00 AM in your account's configured timezone. Monthly schedules run on the 1st of each month. Daily schedules run at 8:00 AM. Contact support to request custom run times on Enterprise plans.
+</Note>
+
+---
+
+## Cancel a Scheduled Report
+
+<api-endpoint method="DELETE" url="https://api.progresspilot.ai/v1/reports/schedules/{schedule_id}" />
+
+Permanently cancels a recurring report schedule. Any reports that have already been generated by this schedule are not deleted and remain accessible via `GET /v1/reports`.
+
+### Path Parameters
+
+<ParamField path="schedule_id" type="string" required>
+  The `schedule_id` of the schedule to cancel.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.progresspilot.ai/v1/reports/schedules/sched_stu901 \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+### Response — 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "schedule_id": "sched_stu901",
+    "cancelled_at": "2024-10-15T12:00:00Z"
+  }
+}
+```

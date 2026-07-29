@@ -1,0 +1,139 @@
+---
+title: "Configure Notifications and Delivery Preferences"
+sidebarTitle: "Notifications"
+description: "Set up when and how Progress Pilot notifies you and your team — configure delivery channels, alert types, digest schedules, and per-user preferences."
+---
+
+Staying informed without being overwhelmed is one of the most important things to get right in an AI-driven operations workflow. Progress Pilot's notification system is designed to put the right information in front of the right people at the right time — whether that's an instant Slack message when a blocker surfaces, a summary email when a meeting ends, or a weekly digest for executives who want the big picture without the noise. This page explains every notification type, how to configure delivery channels, and how individual team members can tailor their own preferences.
+
+## Notification Types
+
+The table below shows every notification that Progress Pilot can send, what triggers it, and its default delivery channel.
+
+| Type | Trigger | Default Channel |
+|---|---|---|
+| Meeting summary ready | After a meeting ends and the agent has processed the recording | Email + Slack |
+| Action item assigned | A new action item is detected and routed to a specific user or team | Email |
+| Report delivered | A scheduled or on-demand report has finished generating | Email + Slack |
+| Blocker detected | A tracked priority is flagged as at risk by the agent | Slack |
+| Agent task failed | An agent task encountered an error and could not complete | Email |
+| Weekly digest | Every Monday at 8:00 AM in the workspace timezone | Email |
+
+You can change the delivery channel for any notification type, add or remove channels, or disable a notification type entirely from **Settings → Notifications**.
+
+## Configuring Notification Channels
+
+Each notification type can be routed to one or more channels independently. To edit a notification type's channels:
+
+<Steps>
+  <Step title="Open Notification Settings">
+    Go to **Settings → Notifications** in the Progress Pilot dashboard.
+  </Step>
+  <Step title="Find the Notification Type">
+    Locate the notification type you want to modify in the list. Each row shows the current active channels as icon badges.
+  </Step>
+  <Step title="Edit Channels">
+    Click **Edit** on the row. A panel opens showing all available channels: **Email**, **Slack**, **Webhook**, and **In-App**. Toggle channels on or off as needed.
+  </Step>
+  <Step title="Save">
+    Click **Save Changes**. Updates take effect immediately for all workspace members who haven't set a personal override.
+  </Step>
+</Steps>
+
+## Digest Settings
+
+Instead of sending individual notifications for every event, Progress Pilot can batch them into a single digest delivered on a schedule. Digests reduce notification volume for high-traffic workspaces without losing any information.
+
+<Tabs>
+  <Tab title="Hourly Digest">
+    Bundles all events from the past hour into a single email or Slack message. Best suited for operational leads who want near-real-time awareness without per-event interruptions.
+  </Tab>
+  <Tab title="Daily Digest">
+    Delivers a consolidated summary of all activity from the previous day at a configurable time. Useful for team leads who review progress once per day.
+  </Tab>
+  <Tab title="Weekly Digest">
+    Sent every Monday morning (workspace timezone), covering the previous week. The default delivery channel is email. Ideal for executives and stakeholders who need a high-level view without real-time alerts.
+  </Tab>
+</Tabs>
+
+To configure the digest schedule for your workspace, go to **Settings → Notifications → Digest Settings**, select a digest frequency, and choose which notification types should be bundled rather than sent individually.
+
+<Note>
+Digest settings apply at the workspace level. Individual users can still override their personal digest preference — for example, opting out of a daily digest in favor of real-time notifications for specific event types.
+</Note>
+
+## Per-User Preferences
+
+Workspace notification settings are the default, but every team member can customize their own notification experience without affecting others. Personal preferences always override workspace defaults for that individual.
+
+To adjust personal preferences, team members navigate to **Account → Notification Preferences**. From there, they can:
+
+- Enable or disable individual notification types
+- Switch delivery channels (e.g. receive blocker alerts via email instead of Slack)
+- Set a personal digest schedule that differs from the workspace default
+- Configure a **Do Not Disturb** window during which only critical alerts (such as `Blocker detected` or `Agent task failed`) are delivered
+
+Admins can view but not override individual users' notification preferences.
+
+## Setting Up Slack Notifications
+
+Slack is the fastest way to surface real-time agent events to your team. Once connected, you can route any notification type to any public or private Slack channel.
+
+<Steps>
+  <Step title="Connect Slack">
+    Go to **Settings → Integrations → Slack** and click **Connect to Slack**. Authorize the Progress Pilot app in the OAuth flow. You'll be redirected back to the dashboard once the connection is established.
+  </Step>
+  <Step title="Open Notification Settings">
+    Navigate to **Settings → Notifications**.
+  </Step>
+  <Step title="Select Notification Types for Slack">
+    For each notification type you want in Slack, click **Edit** and toggle the **Slack** channel on.
+  </Step>
+  <Step title="Choose Target Channels">
+    After enabling Slack for a notification type, a channel selector appears. Pick the target Slack channel for each type — for example, route `Blocker detected` to `#ops-alerts` and `Meeting summary ready` to `#team-meetings`.
+  </Step>
+  <Step title="Save and Test">
+    Click **Save Changes**, then click **Send Test Notification** to send a sample message to each configured channel and confirm delivery.
+  </Step>
+</Steps>
+
+## Webhook Notifications
+
+For custom integrations — internal dashboards, incident management tools, data pipelines — Progress Pilot can POST a structured JSON payload to any HTTPS endpoint every time a notification event fires.
+
+To add a webhook, go to **Settings → Notifications → Webhooks → Add Endpoint**. Enter your destination URL and select the event types you want to receive. Optionally enable HMAC-SHA256 signing to verify that payloads originate from Progress Pilot.
+
+### Webhook Payload Structure
+
+Every webhook delivery follows the same envelope format:
+
+```json
+{
+  "event": "meeting.summary.ready",
+  "timestamp": "2024-10-15T11:30:00Z",
+  "data": {
+    "meeting_id": "meet_abc123",
+    "summary_url": "https://app.progresspilot.ai/meetings/meet_abc123/summary",
+    "action_items_count": 5
+  }
+}
+```
+
+The `event` field identifies the notification type using dot-separated namespacing. The `timestamp` is always in UTC ISO 8601 format. The `data` object contains event-specific fields relevant to the trigger.
+
+### Webhook Event Names
+
+| Notification Type | Webhook Event Name |
+|---|---|
+| Meeting summary ready | `meeting.summary.ready` |
+| Action item assigned | `action_item.assigned` |
+| Report delivered | `report.delivered` |
+| Blocker detected | `blocker.detected` |
+| Agent task failed | `agent.task.failed` |
+| Weekly digest | `digest.weekly` |
+
+Progress Pilot retries failed webhook deliveries up to five times with exponential backoff. You can inspect delivery history and re-send individual events from **Settings → Notifications → Webhooks → Delivery Log**.
+
+<Tip>
+For stakeholders who don't need real-time updates — such as executives, board-level sponsors, or external partners — enroll them in the **weekly digest** rather than individual notifications. The digest is designed to give a complete picture of the week's activity in a single, skimmable email, which is far more appropriate for strategic consumers than a stream of per-event alerts throughout the week.
+</Tip>

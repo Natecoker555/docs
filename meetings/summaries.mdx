@@ -1,0 +1,157 @@
+---
+title: "AI-Generated Meeting Summaries and Detailed Breakdowns"
+sidebarTitle: "Summaries"
+description: "Progress Pilot generates rich meeting summaries with topic breakdowns, key decisions, participant contributions, and sentiment analysis after every meeting."
+---
+
+After every meeting the agent attends, Progress Pilot produces a structured summary that distills hours of conversation into the information your team actually needs to act on. Rather than a raw transcript dump, each summary is organized around the topics discussed, the decisions made, and the sentiment of the room — giving stakeholders who weren't present a clear picture of what happened, and giving attendees a reliable record they can reference without re-watching or re-reading every word. Summaries are generated automatically within minutes of a meeting ending and delivered to the channels you configure.
+
+## Summary Types
+
+Progress Pilot offers three summary formats. You can set a default format at the workspace level and override it for specific meeting types or individual calendar events.
+
+<Tabs>
+  <Tab title="Brief">
+    A single concise paragraph capturing the overall purpose of the meeting, the main conclusions reached, and any critical next steps. Ideal for executives, stakeholders who need a quick read, or recurring standups where brevity is preferred.
+
+    **Example:**
+
+    > The team aligned on Q3 roadmap priorities, confirming API v2 as the top initiative. James Park will circulate an updated draft by Thursday, and a design review is scheduled before the all-hands. Overall sentiment was positive and the team reached consensus on all major items.
+  </Tab>
+  <Tab title="Standard">
+    A topic-by-topic breakdown that covers each agenda item or discussion segment in a short paragraph. Includes a decisions section and a list of key next steps. This is the default format for most workspace configurations.
+
+    Each topic section includes:
+    - A generated or agenda-matched topic title
+    - The key points and conclusions from that segment
+    - The duration the team spent on it
+  </Tab>
+  <Tab title="Detailed">
+    The most comprehensive format — includes everything in Standard plus direct quotes from participants, individual contribution summaries, sentiment analysis per topic, and a full decisions log with attribution. Best suited for quarterly reviews, client meetings, or any session where a formal record is needed.
+  </Tab>
+</Tabs>
+
+## Example Summary Output
+
+The following is an example of the JSON object returned by the Progress Pilot API for a completed meeting summary:
+
+```json
+{
+  "meeting_id": "meet_abc123",
+  "title": "Q3 Roadmap Planning",
+  "date": "2024-10-15T10:00:00Z",
+  "duration_minutes": 45,
+  "participants": ["Sarah Chen", "James Park", "Maria Torres"],
+  "summary": "The team aligned on Q3 roadmap priorities, finalizing three key initiatives: API v2 launch, mobile redesign, and enterprise SSO.",
+  "topics": [
+    {
+      "title": "Q3 Roadmap Finalization",
+      "duration_minutes": 20,
+      "key_points": ["API v2 launch prioritized", "Mobile redesign scoped for Q3"]
+    },
+    {
+      "title": "Team Alignment",
+      "duration_minutes": 15,
+      "key_points": ["Design review before all-hands", "James to send draft by Thursday"]
+    }
+  ],
+  "decisions": [
+    "API v2 is the top priority for Q3",
+    "All-hands alignment required before roadmap lock"
+  ],
+  "sentiment": "positive"
+}
+```
+
+The `sentiment` field reflects an overall signal derived from language analysis across the full transcript. Possible values are `positive`, `neutral`, `mixed`, and `negative`. This field is available on the **Business** and **Enterprise** plans.
+
+## Configuring Summary Format Per Meeting Type
+
+You can configure different summary formats for different types of recurring meetings so that each output is automatically tuned to what your team needs from it.
+
+<Steps>
+  <Step title="Open Meeting Templates">
+    Navigate to **Settings → Meeting Intelligence → Templates** and click **New Template**.
+  </Step>
+  <Step title="Define the meeting type">
+    Give the template a name (e.g., *"Weekly Team Standup"* or *"Executive Business Review"*) and describe the matching criteria — you can match by calendar event title keyword, organizer, or attendee group.
+  </Step>
+  <Step title="Set the summary format">
+    Choose **Brief**, **Standard**, or **Detailed** as the default format for this meeting type. You can also enable or disable specific summary sections (e.g., turn off sentiment analysis for internal standups).
+  </Step>
+  <Step title="Configure delivery channels">
+    Set where the summary for this meeting type should be sent — overriding your global delivery defaults if needed.
+  </Step>
+  <Step title="Save and activate">
+    Click **Save Template**. The template takes effect immediately for all future meetings that match the criteria.
+  </Step>
+</Steps>
+
+## Delivery Channels
+
+Progress Pilot can deliver meeting summaries through multiple channels simultaneously. Configure your preferred channels in **Settings → Meeting Intelligence → Delivery**.
+
+| Channel | What's Delivered | Configuration |
+|---|---|---|
+| **Email** | Formatted HTML summary sent to all attendees and optional additional recipients | Toggle on, add CC addresses if needed |
+| **Slack** | Summary posted to a designated channel or DM'd to the meeting organizer | Connect Slack in Integrations, select target channel |
+| **Google Docs** | Full summary saved as a new Google Doc in a folder you specify | Connect Google Drive in Integrations, select target folder |
+| **Webhook** | Raw JSON summary payload POSTed to your endpoint | Provide a webhook URL and optional secret header |
+
+You can combine any number of these channels. For example, a common configuration is to send a **Brief** summary by email to all attendees, post the **Standard** summary to a Slack channel, and save the **Detailed** summary to a Google Docs folder for archival.
+
+## Accessing Summaries via API
+
+Every meeting summary is available through the Progress Pilot REST API. Use the following endpoint to retrieve a summary programmatically:
+
+```http
+GET /api/v1/meetings/{id}/summary
+```
+
+**Request example:**
+
+```bash
+curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/summary" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "meeting_id": "meet_abc123",
+  "title": "Q3 Roadmap Planning",
+  "date": "2024-10-15T10:00:00Z",
+  "duration_minutes": 45,
+  "participants": ["Sarah Chen", "James Park", "Maria Torres"],
+  "summary": "The team aligned on Q3 roadmap priorities, finalizing three key initiatives: API v2 launch, mobile redesign, and enterprise SSO.",
+  "topics": [
+    {
+      "title": "Q3 Roadmap Finalization",
+      "duration_minutes": 20,
+      "key_points": ["API v2 launch prioritized", "Mobile redesign scoped for Q3"]
+    },
+    {
+      "title": "Team Alignment",
+      "duration_minutes": 15,
+      "key_points": ["Design review before all-hands", "James to send draft by Thursday"]
+    }
+  ],
+  "decisions": [
+    "API v2 is the top priority for Q3",
+    "All-hands alignment required before roadmap lock"
+  ],
+  "sentiment": "positive"
+}
+```
+
+You can append `?format=brief` or `?format=detailed` to the request URL to override the stored summary format and receive a freshly rendered version in your preferred level of detail.
+
+For a full list of meeting API endpoints and parameters, see the [API Reference](/api-reference/meetings).
+
+---
+
+<Tip>
+Create a **Summary Template** for each of your recurring meeting types — weekly standups, sprint reviews, one-on-ones, and quarterly business reviews each benefit from different levels of detail and different delivery destinations. Templates save you from manually adjusting settings before every meeting and ensure that your team always receives summaries in the format they expect. You'll find templates under **Settings → Meeting Intelligence → Templates**.
+</Tip>

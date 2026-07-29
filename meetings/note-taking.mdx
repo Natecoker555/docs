@@ -1,0 +1,153 @@
+---
+title: "Automated Meeting Note-Taking with Progress Pilot"
+sidebarTitle: "Note Taking"
+description: "Configure Progress Pilot to join and transcribe your meetings automatically, with speaker identification, timestamps, and structured topic breakdowns."
+---
+
+Progress Pilot eliminates the burden of manual note-taking by sending an AI agent to every meeting that needs coverage. The agent captures a complete, timestamped, speaker-labeled transcript of your conversation in real time — giving your team a reliable record they can reference, search, and share without anyone having to divide their attention between participating and writing things down. Every word spoken is preserved with context, so nothing important slips through the cracks after a meeting ends.
+
+## How the Agent Joins Meetings
+
+There are two ways to get Progress Pilot into a meeting. You can use either method independently or combine them.
+
+<Tabs>
+  <Tab title="Invite by Calendar Event">
+    Add `agent@progresspilot.ai` as a guest on any calendar event. Progress Pilot will detect the invite, identify the meeting platform from the event details, and automatically join at the scheduled start time.
+
+    This method gives you per-meeting control. It works with Google Calendar, Outlook, and Exchange, and supports all three meeting platforms (Google Meet, Zoom, Microsoft Teams).
+
+    **To invite the agent:**
+    1. Open your calendar event.
+    2. Add `agent@progresspilot.ai` to the guest list.
+    3. Save and send the updated invite. The agent will confirm attendance automatically.
+  </Tab>
+  <Tab title="Auto-Join (All Meetings)">
+    Enable auto-join to have Progress Pilot attend every meeting on your connected calendar without needing a manual invite each time.
+
+    Navigate to **Settings → Meeting Intelligence → Auto-Join** and toggle the feature on. You can optionally exclude certain calendars, event types (e.g., personal appointments), or meetings with fewer than a specified number of attendees.
+
+    When auto-join is active, you can still exclude individual meetings by opening the event in your calendar and adding the tag `nopilot` to the event title or description.
+  </Tab>
+</Tabs>
+
+## Real-Time vs. Post-Meeting Transcription
+
+Progress Pilot supports two transcription modes depending on the meeting platform and your plan:
+
+| Mode | Availability | Latency | Best For |
+|---|---|---|---|
+| **Real-time** | Google Meet, Zoom, Teams (Enterprise) | < 3 seconds | Live Q&A assistance, in-meeting alerts |
+| **Post-meeting** | All platforms | 2–5 minutes after call ends | Accuracy-optimized transcripts, all plans |
+
+In real-time mode, a live transcript feed is available in your Progress Pilot dashboard while the meeting is still in progress. In post-meeting mode, the transcript is finalized and delivered after the call ends, with a second pass for accuracy improvements.
+
+<Info>
+Real-time transcription requires the **Business** or **Enterprise** plan and is currently available on Google Meet and Zoom. Microsoft Teams real-time support is in beta — contact your account team to enable it.
+</Info>
+
+## Speaker Identification
+
+Progress Pilot identifies who said what by matching audio signatures and calendar metadata to workspace member profiles. Speaker identification works in three stages:
+
+1. **Calendar matching** — Attendees listed on the calendar event are pre-loaded as candidate speakers before the meeting starts.
+2. **Voice profile matching** — If a workspace member has completed voice enrollment (under **Settings → Profile → Voice ID**), their speech is matched to their profile in real time.
+3. **Name mention fallback** — When voice profiles are unavailable, the agent uses self-introductions and name mentions in the conversation to label speakers as accurately as possible.
+
+Speakers who are not workspace members (external guests) appear in the transcript as **"Guest 1"**, **"Guest 2"**, etc. You can manually relabel any speaker in the transcript editor in your dashboard after the meeting ends.
+
+## Transcript Structure
+
+Transcripts are formatted with timestamps, speaker names, and role labels pulled from your workspace directory. Here is an example of what a transcript excerpt looks like:
+
+```text
+[10:02 AM] Sarah Chen (Engineering Lead): We need to finalize the Q3 roadmap by end of week.
+[10:03 AM] James Park (Product): Agreed. I'll send the updated draft by Thursday.
+[10:04 AM] Sarah Chen: Great. Let's also align with design before the all-hands.
+```
+
+Each line in the raw transcript corresponds to a single uninterrupted speaking turn. Timestamps reflect the wall-clock time of the meeting in the timezone configured for your workspace.
+
+## Topic Segmentation
+
+Progress Pilot automatically groups transcript sections by topic or agenda item using a combination of keyword clustering, transition phrase detection, and — when available — your meeting's agenda from the calendar event description.
+
+Each detected topic segment appears as a collapsible section in the transcript viewer, labeled with:
+- A generated topic title (e.g., *"Q3 Roadmap Finalization"*)
+- The start and end timestamps for that segment
+- A count of the participants who contributed to that segment
+
+If you have a formal agenda in your calendar event, Progress Pilot maps transcript content to your agenda items instead of generating its own topic labels. To use this feature, format your agenda as a numbered list in the event description.
+
+## Viewing Transcripts in the Dashboard
+
+All transcripts are accessible from the **Meetings** section of your Progress Pilot dashboard.
+
+<Steps>
+  <Step title="Open the Meetings section">
+    Click **Meetings** in the left navigation bar. You'll see a chronological list of all meetings the agent has attended.
+  </Step>
+  <Step title="Select a meeting">
+    Click on any meeting card to open its detail view. The transcript is displayed in the **Transcript** tab alongside the summary and action items.
+  </Step>
+  <Step title="Navigate by topic or speaker">
+    Use the **Topics** filter to jump to a specific segment of the meeting, or use the **Speaker** filter to view only the contributions of a specific participant.
+  </Step>
+  <Step title="Search within a transcript">
+    Use the search bar at the top of the transcript panel to find any word or phrase. Matches are highlighted inline with surrounding context.
+  </Step>
+</Steps>
+
+## Exporting Transcripts
+
+You can export any meeting transcript in three formats:
+
+<Tabs>
+  <Tab title="TXT">
+    Plain text export with timestamps and speaker labels preserved. Best for archival, lightweight storage, or pasting into other tools.
+
+    ```text
+    [10:02 AM] Sarah Chen (Engineering Lead): We need to finalize the Q3 roadmap by end of week.
+    [10:03 AM] James Park (Product): Agreed. I'll send the updated draft by Thursday.
+    ```
+  </Tab>
+  <Tab title="DOCX">
+    Formatted Word document with speaker labels styled as headings, topics as sections, and timestamps in a sidebar margin. Suitable for sharing with stakeholders who are not Progress Pilot users.
+  </Tab>
+  <Tab title="JSON">
+    Structured JSON export containing the full transcript as an array of turn objects, each with speaker metadata, timestamps, and topic tags. Ideal for programmatic ingestion or integration with external systems.
+
+    ```json
+    {
+      "meeting_id": "meet_abc123",
+      "transcript": [
+        {
+          "timestamp": "10:02:00",
+          "speaker": "Sarah Chen",
+          "role": "Engineering Lead",
+          "text": "We need to finalize the Q3 roadmap by end of week.",
+          "topic": "Q3 Roadmap Finalization"
+        },
+        {
+          "timestamp": "10:03:00",
+          "speaker": "James Park",
+          "role": "Product",
+          "text": "Agreed. I'll send the updated draft by Thursday.",
+          "topic": "Q3 Roadmap Finalization"
+        }
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+To export, open a meeting record, navigate to the **Transcript** tab, and click **Export** in the top-right corner. Select your preferred format from the dropdown.
+
+---
+
+<Note>
+Progress Pilot only generates a transcript for meetings that last **at least 2 minutes**. Calls that end before this threshold — accidental joins, dropped connections, or very brief check-ins — are logged in your meeting history but do not produce a transcript or summary.
+</Note>
+
+<Warning>
+You are responsible for complying with all applicable laws governing the recording and transcription of conversations in your jurisdiction. In many regions — including several US states and countries in the EU — **all-party consent** is required before a meeting can be recorded or transcribed. Always ensure that every participant is notified of the Progress Pilot agent's presence before the meeting begins. Do not use meeting intelligence in contexts where participants have not given their informed consent.
+</Warning>

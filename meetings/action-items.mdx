@@ -1,0 +1,147 @@
+---
+title: "Extract and Track Action Items from Meetings Automatically"
+sidebarTitle: "Action Items"
+description: "Progress Pilot identifies, assigns, and tracks action items from meeting transcripts, routing them to Jira, Asana, or your team's task management tool."
+---
+
+Every meeting produces commitments — tasks someone agreed to complete, questions someone offered to follow up on, decisions that need to be documented. Progress Pilot automatically identifies these action items in your meeting transcripts, matches them to the right people on your team, and routes them directly into the tools where work actually gets done. Rather than relying on attendees to capture their own takeaways, you get a complete, attributed list of next steps delivered to your task manager within minutes of the call ending.
+
+## What Counts as an Action Item
+
+Progress Pilot's extraction model is trained to recognize three categories of commitment language in meeting transcripts:
+
+- **Direct task assignments** — Explicit statements where one person assigns a task to another, or a participant volunteers to own something. Example: *"James, can you send the updated draft by Thursday?"* or *"I'll take care of the design review scheduling."*
+- **Follow-up commitments** — Statements where a participant commits to share information, schedule something, or respond after the meeting. Example: *"Let me check with the infra team and get back to you."*
+- **Deferred decisions** — Items the team explicitly decided to address outside the meeting. Example: *"We'll finalize the budget allocation offline."*
+
+Items that are discussed but not committed to — opinions, open questions without an owner, background context — are not extracted as action items. If Progress Pilot misses an item or incorrectly tags something, you can manually add or remove action items in the meeting record after the fact.
+
+## Example Detected Action Items
+
+The following table shows a typical set of action items extracted from a 45-minute planning meeting:
+
+| Task | Assigned To | Due Date | Source Quote |
+|---|---|---|---|
+| Send updated Q3 roadmap draft | James Park | Thursday, Oct 17 | *"I'll send the updated draft by Thursday."* |
+| Schedule design review before all-hands | Sarah Chen | Oct 18 | *"Let's align with design before the all-hands."* |
+| Confirm enterprise SSO timeline with engineering | Maria Torres | Oct 22 | *"Maria, can you loop back with engineering on the SSO scope?"* |
+| Share API v2 spec with the product team | Sarah Chen | Oct 16 | *"I'll circulate the spec so everyone has context."* |
+
+Due dates are inferred from relative language in the transcript (e.g., *"by end of week"*, *"by Thursday"*, *"next sprint"*) anchored to the meeting date. When no due date can be inferred, the action item is created without one and flagged for manual review.
+
+## How Assignees Are Determined
+
+Progress Pilot resolves the owner of each action item through a two-step matching process:
+
+1. **Speaker attribution** — If the person making the commitment is the one speaking (e.g., *"I'll handle that"*), the action item is attributed to the identified speaker using the transcript's speaker labels.
+2. **Addressee resolution** — If the commitment is directed at someone else (e.g., *"Can you send that over?"*), Progress Pilot identifies the addressee by matching the name or role mentioned to workspace member profiles.
+
+When the speaker or addressee cannot be confidently matched to a workspace member, the action item is flagged as **Unassigned** and highlighted in your dashboard for manual triage. You can also set default assignees for recurring meetings so that unresolved items have a fallback owner — see the tip at the bottom of this page.
+
+## Routing Action Items to Your Tools
+
+Progress Pilot can automatically send extracted action items to the task management tools your team already uses. Configure routing in **Settings → Integrations → Task Management**.
+
+| Integration | Item Type Created | Supported Fields |
+|---|---|---|
+| **Jira** | Story or Task (configurable) | Summary, assignee, due date, priority, project |
+| **Asana** | Task | Name, assignee, due date, project, notes |
+| **Linear** | Issue | Title, assignee, due date, team, priority |
+| **Google Tasks** | Task | Title, due date, notes |
+| **Slack** | Reminder or DM | Task description, assignee, due date |
+
+You can route to multiple destinations simultaneously — for example, creating a Jira ticket for engineering-owned items and sending a Slack reminder for items assigned to stakeholders who don't use Jira.
+
+## Setting Up Jira Routing
+
+<Steps>
+  <Step title="Connect Jira in Integrations settings">
+    Navigate to **Settings → Integrations → Jira** and click **Connect**. You'll be prompted to authenticate with your Atlassian account and select the Jira site you want to connect. Progress Pilot requires project read and issue write permissions.
+  </Step>
+  <Step title="Map Progress Pilot projects to Jira projects">
+    Once connected, open the **Project Mapping** tab. For each Progress Pilot project (or team), select the corresponding Jira project where action items from meetings in that context should be created. You can map multiple Progress Pilot projects to the same Jira project if needed.
+  </Step>
+  <Step title="Configure action item → ticket field mapping">
+    In the **Field Mapping** tab, define how Progress Pilot action item fields translate into Jira issue fields. At minimum, map the task description to the Jira **Summary** field and the assignee to the Jira **Assignee** field. You can also map due dates, inferred priority, and the source quote to custom Jira fields.
+  </Step>
+  <Step title="Test with a sample meeting">
+    Click **Test Connection** on the Jira integration page. Progress Pilot will create a sample issue in your selected project using placeholder data, so you can verify that the field mapping looks correct before your next real meeting. Delete the test issue in Jira once you've confirmed everything is working.
+  </Step>
+</Steps>
+
+## Viewing Action Items in the Dashboard
+
+All action items across all meetings are available in the **Action Items** section of your Progress Pilot dashboard.
+
+- **By meeting** — Open any meeting record and click the **Action Items** tab to see all items extracted from that specific session.
+- **By assignee** — Use the **Team View** to see all open action items grouped by the person responsible for them — useful for managers tracking follow-through across their reports.
+- **By status** — Filter by **Open**, **In Progress**, **Complete**, or **Overdue** to focus on what needs attention.
+- **Global search** — Search across all action items by keyword, assignee, meeting title, or date range.
+
+## Marking Items Complete and Tracking Follow-Through
+
+Action items can be marked complete from multiple places:
+
+- Directly in the **Action Items** dashboard by checking the item off
+- From the meeting record's **Action Items** tab
+- Automatically, when the linked Jira ticket, Asana task, or Linear issue is closed (status sync is available on **Business** and **Enterprise** plans)
+
+Progress Pilot tracks the completion rate for action items over time and surfaces this data in your **Operations Analytics** dashboard. You can see trends by team, meeting type, and time period — giving you a data-driven view of how well your organization follows through on its commitments.
+
+## API Access
+
+Retrieve action items for a specific meeting programmatically using the following endpoint:
+
+```http
+GET /api/v1/meetings/{id}/action-items
+```
+
+**Request example:**
+
+```bash
+curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/action-items" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "meeting_id": "meet_abc123",
+  "action_items": [
+    {
+      "id": "ai_001",
+      "task": "Send updated Q3 roadmap draft",
+      "assigned_to": "james.park@company.com",
+      "due_date": "2024-10-17",
+      "status": "open",
+      "source_quote": "I'll send the updated draft by Thursday.",
+      "timestamp": "10:03:00",
+      "routed_to": {
+        "integration": "jira",
+        "issue_id": "ENG-4421",
+        "issue_url": "https://company.atlassian.net/browse/ENG-4421"
+      }
+    },
+    {
+      "id": "ai_002",
+      "task": "Schedule design review before all-hands",
+      "assigned_to": "sarah.chen@company.com",
+      "due_date": "2024-10-18",
+      "status": "open",
+      "source_quote": "Let's align with design before the all-hands.",
+      "timestamp": "10:04:00",
+      "routed_to": null
+    }
+  ]
+}
+```
+
+You can also update the status of an action item via the API using `PATCH /api/v1/tasks/{id}`. For the full list of action item endpoints and request schemas, see the [API Reference](/api-reference/tasks).
+
+---
+
+<Tip>
+For recurring meetings — weekly standups, sprint ceremonies, one-on-ones — configure a **Default Assignee** in the meeting template so that any action items the agent cannot confidently attribute to a specific speaker are automatically assigned to the meeting organizer or team lead rather than left unassigned. You'll find this setting under **Settings → Meeting Intelligence → Templates → [Template Name] → Default Assignee**.
+</Tip>

@@ -1,0 +1,324 @@
+---
+title: "REST API Endpoints for Action Items and Tasks"
+sidebarTitle: "Tasks"
+description: "List, update, and manage action items extracted from meetings and assigned to team members via the Progress Pilot tasks API."
+---
+
+The Tasks API gives you full programmatic control over action items — whether they were extracted automatically from a meeting transcript by the Progress Pilot AI agent or created manually by a team member. You can list tasks by assignee or status, update their state as work progresses, create standalone tasks outside of a meeting context, and delete tasks that are no longer relevant. Tasks can also be synced bidirectionally with external systems like Jira, Linear, and Asana via the `routing` field.
+
+## Task Object
+
+Every task in Progress Pilot has the following structure:
+
+```json
+{
+  "task_id": "t_001",
+  "title": "Send updated roadmap draft by Thursday",
+  "assignee": "james.park@company.com",
+  "status": "open",
+  "due_date": "2024-10-17",
+  "source_meeting_id": "meet_abc123",
+  "source_quote": "I'll send the updated draft by Thursday.",
+  "created_at": "2024-10-15T10:03:00Z",
+  "routing": {
+    "system": "jira",
+    "ticket_id": "ENG-421"
+  }
+}
+```
+
+<ResponseField name="task_id" type="string">
+  The unique identifier for this task.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  A concise description of the action item.
+</ResponseField>
+
+<ResponseField name="assignee" type="string">
+  Email address of the person responsible for completing this task.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current task status. One of: `open`, `in_progress`, `completed`, `dismissed`.
+</ResponseField>
+
+<ResponseField name="due_date" type="string">
+  ISO 8601 date string for the task deadline. May be `null` if no due date was specified or inferred.
+</ResponseField>
+
+<ResponseField name="source_meeting_id" type="string">
+  The `meeting_id` of the meeting this task was extracted from. `null` for manually created tasks.
+</ResponseField>
+
+<ResponseField name="source_quote" type="string">
+  The verbatim quote from the meeting transcript that the agent used to extract this action item. `null` for manually created tasks.
+</ResponseField>
+
+<ResponseField name="routing" type="object">
+  If the task has been synced to an external system, this object contains the `system` name (e.g. `jira`, `linear`, `asana`) and the corresponding `ticket_id` in that system. `null` if no routing has been configured.
+</ResponseField>
+
+## Task Status Lifecycle
+
+Tasks follow a defined lifecycle from creation through to resolution.
+
+```mermaid
+stateDiagram-v2
+    [*] --> open : Task created (from meeting or manually)
+    open --> in_progress : Assignee begins work
+    open --> dismissed : Task no longer relevant
+    in_progress --> completed : Work finished
+    in_progress --> dismissed : Task abandoned
+    completed --> [*]
+    dismissed --> [*]
+```
+
+<Note>
+  Tasks with `status: dismissed` are retained in the API for audit and reporting purposes but are excluded from default list results. Pass `status=dismissed` explicitly to include them.
+</Note>
+
+---
+
+## List All Tasks
+
+<api-endpoint method="GET" url="https://api.progresspilot.ai/v1/tasks" />
+
+Returns a paginated list of action items, ordered by `created_at` descending. Use the query parameters to filter by assignee, status, or originating meeting.
+
+### Query Parameters
+
+<ParamField query="assignee" type="string">
+  Filter tasks by assignee email address, e.g. `james.park@company.com`.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by task status. One of: `open`, `in_progress`, `completed`, `dismissed`. Defaults to returning `open` and `in_progress` tasks when omitted.
+</ParamField>
+
+<ParamField query="meeting_id" type="string">
+  Filter tasks by the meeting they were extracted from, e.g. `meet_abc123`.
+</ParamField>
+
+<ParamField query="page" type="integer">
+  Page number to retrieve. Defaults to `1`.
+</ParamField>
+
+<ParamField query="per_page" type="integer">
+  Number of tasks per page. Defaults to `20`. Maximum is `100`.
+</ParamField>
+
+### Example Request
+
+```bash
+curl "https://api.progresspilot.ai/v1/tasks?assignee=james.park%40company.com&status=open&page=1&per_page=20" \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "task_id": "t_001",
+      "title": "Send updated roadmap draft by Thursday",
+      "assignee": "james.park@company.com",
+      "status": "open",
+      "due_date": "2024-10-17",
+      "source_meeting_id": "meet_abc123",
+      "source_quote": "I'll send the updated draft by Thursday.",
+      "created_at": "2024-10-15T10:03:00Z",
+      "routing": { "system": "jira", "ticket_id": "ENG-421" }
+    },
+    {
+      "task_id": "t_003",
+      "title": "Review infrastructure cost proposal",
+      "assignee": "james.park@company.com",
+      "status": "open",
+      "due_date": "2024-10-20",
+      "source_meeting_id": "meet_def456",
+      "source_quote": "James, can you review the cost proposal before the next sprint planning?",
+      "created_at": "2024-10-14T09:15:00Z",
+      "routing": null
+    }
+  ],
+  "meta": {
+    "request_id": "req_vwx234",
+    "timestamp": "2024-10-15T11:00:00Z",
+    "pagination": {
+      "page": 1,
+      "per_page": 20,
+      "total": 2,
+      "total_pages": 1
+    }
+  }
+}
+```
+
+---
+
+## Update a Task
+
+<api-endpoint method="PATCH" url="https://api.progresspilot.ai/v1/tasks/{id}" />
+
+Updates one or more fields on an existing task. You only need to include the fields you want to change — all other fields remain unchanged.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `task_id` of the task to update.
+</ParamField>
+
+### Request Body
+
+<ParamField body="status" type="string">
+  The new status for the task. One of: `open`, `in_progress`, `completed`, `dismissed`.
+</ParamField>
+
+<ParamField body="due_date" type="string">
+  Updated due date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField body="assignee" type="string">
+  Reassign the task to a different team member by email address.
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Free-text notes to append to the task record, such as a completion summary or a reason for dismissal.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X PATCH https://api.progresspilot.ai/v1/tasks/t_001 \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "completed",
+    "notes": "Draft sent and acknowledged by team"
+  }'
+```
+
+### Response — 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "t_001",
+    "title": "Send updated roadmap draft by Thursday",
+    "assignee": "james.park@company.com",
+    "status": "completed",
+    "due_date": "2024-10-17",
+    "notes": "Draft sent and acknowledged by team",
+    "completed_at": "2024-10-15T11:30:00Z",
+    "source_meeting_id": "meet_abc123",
+    "source_quote": "I'll send the updated draft by Thursday.",
+    "created_at": "2024-10-15T10:03:00Z",
+    "routing": { "system": "jira", "ticket_id": "ENG-421" }
+  }
+}
+```
+
+<Tip>
+  If your task is routed to Jira, Linear, or Asana via the `routing` field, updating `status` to `completed` here will automatically close the linked ticket in the external system — no additional API call required.
+</Tip>
+
+---
+
+## Create a Task
+
+<api-endpoint method="POST" url="https://api.progresspilot.ai/v1/tasks" />
+
+Manually creates a new task that is not derived from a meeting. Useful for tracking commitments made outside of monitored meetings, or for injecting tasks from external systems into Progress Pilot's tracking layer.
+
+### Request Body
+
+<ParamField body="title" type="string" required>
+  A concise description of the action item, e.g. `"Review security audit findings"`.
+</ParamField>
+
+<ParamField body="assignee" type="string" required>
+  Email address of the person responsible for this task.
+</ParamField>
+
+<ParamField body="due_date" type="string">
+  Due date in `YYYY-MM-DD` format. If omitted, the task will have no due date until one is set via `PATCH /v1/tasks/{id}`.
+</ParamField>
+
+<ParamField body="priority" type="string">
+  Task priority. Accepted values: `low`, `normal` (default), `high`. Affects ordering in the dashboard and digest emails.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/tasks \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Review security audit findings",
+    "assignee": "sarah.chen@company.com",
+    "due_date": "2024-10-22",
+    "priority": "high"
+  }'
+```
+
+### Response — 201 Created
+
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "t_042",
+    "title": "Review security audit findings",
+    "assignee": "sarah.chen@company.com",
+    "status": "open",
+    "due_date": "2024-10-22",
+    "priority": "high",
+    "source_meeting_id": null,
+    "source_quote": null,
+    "created_at": "2024-10-15T11:45:00Z",
+    "routing": null
+  }
+}
+```
+
+---
+
+## Delete a Task
+
+<api-endpoint method="DELETE" url="https://api.progresspilot.ai/v1/tasks/{id}" />
+
+Permanently deletes a task. Unlike setting `status` to `dismissed`, deletion is irreversible and the task will not appear in any future API responses or reports.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The `task_id` of the task to delete.
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X DELETE https://api.progresspilot.ai/v1/tasks/t_042 \
+  -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+### Response — 200 OK
+
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "t_042",
+    "deleted_at": "2024-10-15T12:00:00Z"
+  }
+}
+```
+
+<Warning>
+  Task deletion is permanent. If you want to preserve the task for audit history while removing it from active views, set `status` to `dismissed` using `PATCH /v1/tasks/{id}` instead.
+</Warning>

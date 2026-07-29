@@ -1,0 +1,143 @@
+---
+title: "AI-Powered Process Improvement Recommendations"
+sidebarTitle: "Process Improvements"
+description: "Progress Pilot scans your team's workflows, meeting patterns, and operational data to surface bottlenecks and recommend actionable process improvements."
+---
+
+Progress Pilot continuously analyzes your organization's operational data to surface friction you might not see day-to-day. By examining meeting patterns, action item velocity, report cadences, and cross-team handoff times, the agent produces ranked, evidence-backed recommendations that your team can act on immediately — no manual auditing or spreadsheet archaeology required.
+
+## How It Works
+
+The process improvement engine ingests data from connected integrations and evaluates four key operational signals:
+
+<CardGroup cols={2}>
+  <Card title="Meeting Frequency" icon="calendar">
+    Identifies teams with excessive or insufficient meeting cadences relative to their output and action item completion rates.
+  </Card>
+  <Card title="Action Item Completion" icon="circle-check">
+    Tracks open action items across meetings and flags patterns where tasks consistently go unresolved beyond their due dates.
+  </Card>
+  <Card title="Report Cadences" icon="chart-bar">
+    Detects delays between report generation, distribution, and stakeholder acknowledgment that introduce decision latency.
+  </Card>
+  <Card title="Cross-Team Handoff Times" icon="arrows-left-right">
+    Measures the time elapsed between one team completing a deliverable and the downstream team picking it up to find coordination drag.
+  </Card>
+</CardGroup>
+
+The agent correlates these signals against each other to distinguish isolated incidents from systemic issues, then groups its findings into actionable recommendation categories before surfacing them in your dashboard or via API.
+
+## Running a Process Improvement Scan
+
+You can trigger a scan at any time against a specific team scope and lookback window. Use the `/v1/agents/run` endpoint with the `process_improvement_scan` task:
+
+```bash
+curl -X POST https://api.progresspilot.ai/v1/agents/run \
+  -H "Authorization: Bearer ppk_live_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "process_improvement_scan",
+    "context": {
+      "scope": "engineering",
+      "lookback_days": 30
+    }
+  }'
+```
+
+The `scope` field accepts a team slug, `"org"` for a full organization scan, or a comma-separated list of team slugs such as `"engineering,product"`. The `lookback_days` value determines how far back the agent reaches when analyzing historical data.
+
+<Tip>
+  Start with a `lookback_days` value of `30` for your first scan. This gives the agent enough signal to detect meaningful patterns without surfacing noise from seasonal anomalies or one-off events. Once you've reviewed and acted on initial recommendations, extend to 60 or 90 days for deeper trend analysis.
+</Tip>
+
+## Scan Result Categories
+
+Every scan result organizes findings into four categories. Each finding includes a severity rating (`low`, `medium`, `high`), supporting evidence, and a concrete recommendation.
+
+| Category | What It Covers |
+|---|---|
+| **Meeting Efficiency** | Recurring meetings with low attendance, excessive duration relative to outcomes, or missing agendas |
+| **Workflow Bottlenecks** | Steps in recurring workflows where work queues up, approvals stall, or hand-off SLAs are repeatedly missed |
+| **Communication Gaps** | Decision-making patterns where key stakeholders are not looped in until late, causing rework or reversals |
+| **Reporting Delays** | Report generation or delivery delays that push stakeholders to request status updates manually |
+
+## Example Scan Output
+
+A completed scan returns a structured JSON response with a `recommendations` array. Each recommendation carries the evidence the agent used to derive it:
+
+```json
+{
+  "scan_id": "scan_01J3KQ8VRPBF6ZT4WNHX",
+  "scope": "engineering",
+  "lookback_days": 30,
+  "generated_at": "2024-07-15T09:32:00Z",
+  "summary": {
+    "total_recommendations": 4,
+    "high_severity": 1,
+    "medium_severity": 2,
+    "low_severity": 1
+  },
+  "recommendations": [
+    {
+      "id": "rec_001",
+      "category": "Meeting Efficiency",
+      "severity": "high",
+      "title": "Daily standups averaging 34 minutes — 2.4x industry benchmark",
+      "evidence": {
+        "avg_duration_minutes": 34,
+        "benchmark_minutes": 14,
+        "meetings_analyzed": 22
+      },
+      "recommendation": "Introduce a structured agenda template capping updates at 2 minutes per participant. Consider async written standups on Mondays and Fridays.",
+      "status": "open"
+    },
+    {
+      "id": "rec_002",
+      "category": "Workflow Bottlenecks",
+      "severity": "medium",
+      "title": "PR review handoff to QA averaging 3.2 days",
+      "evidence": {
+        "avg_handoff_days": 3.2,
+        "target_handoff_days": 1,
+        "occurrences": 18
+      },
+      "recommendation": "Add a dedicated QA queue review to the Wednesday team sync agenda to clear backlogged reviews before they age past 48 hours.",
+      "status": "open"
+    }
+  ]
+}
+```
+
+## Acting on Recommendations
+
+Once a scan completes, each recommendation in your dashboard supports three actions:
+
+<Steps>
+  <Step title="Assign to a Team Member">
+    Click **Assign** on any recommendation and select a team member. Progress Pilot creates a tracked action item linked to the recommendation, sends the assignee a notification, and monitors completion status. The recommendation card updates in real time as work progresses.
+  </Step>
+  <Step title="Create a Task">
+    Select **Create Task** to push the recommendation directly into your connected project management tool (Jira, Linear, Asana, or Notion). The task is pre-populated with the recommendation title, evidence summary, and suggested steps so the assignee has full context from day one.
+  </Step>
+  <Step title="Dismiss">
+    If a recommendation is not applicable — for example, a long meeting duration that is intentional for a quarterly planning session — select **Dismiss** and provide a brief reason. Dismissed items are excluded from future scans for that specific pattern and logged for audit purposes.
+  </Step>
+</Steps>
+
+## Scheduled Scans
+
+Rather than triggering scans manually, you can configure Progress Pilot to run them automatically on a weekly or monthly cadence. Navigate to **Settings → Scheduled Tasks** in the dashboard, click **New Scheduled Scan**, and configure the following:
+
+| Setting | Options |
+|---|---|
+| **Scope** | Team slug, list of teams, or full organization |
+| **Frequency** | Weekly (specify day) or Monthly (specify date) |
+| **Lookback Window** | 7, 14, 30, 60, or 90 days |
+| **Delivery** | Dashboard notification, Slack channel, or email digest |
+| **Auto-assign** | Optionally route high-severity findings to a designated owner automatically |
+
+Scheduled scans run at 6:00 AM in your workspace's configured timezone and deliver results before your team's business day begins.
+
+<Note>
+  Scheduled scans count against your plan's monthly agent task quota. Check **Settings → Usage** to confirm you have sufficient capacity before enabling high-frequency scans across multiple teams.
+</Note>
