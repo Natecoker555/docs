@@ -1,7 +1,7 @@
 ---
-title: "Connect Progress Pilot to Your Tools and Systems"
+title: "Connect Progress Pilot to Your Tools and Data Systems"
 sidebarTitle: "Overview"
-description: "Progress Pilot integrates with 30+ tools including Google Workspace, Slack, Jira, Zoom, and databases. Connect your stack to unlock AI-powered operations across every system."
+description: "Progress Pilot integrates with 30+ tools including Google Workspace, Slack, Jira, and Zoom. Connect your stack to unlock AI-powered operations at scale."
 ---
 
 Progress Pilot becomes dramatically more powerful when connected to the tools your team already uses. Rather than asking you to change how you work, Progress Pilot meets your team where it is — reading your calendar, joining your meetings, posting to your Slack channels, and pulling data from your databases to generate the insights and reports that used to take hours to compile manually. Every integration is built on secure, auditable, OAuth-based authentication with scoped permissions you control.
@@ -18,7 +18,7 @@ Progress Pilot becomes dramatically more powerful when connected to the tools yo
   <Card title="Data Systems" icon="database" href="/integrations/data-systems">
     Pull structured data from BigQuery, PostgreSQL, Google Sheets, and more to power AI-generated reports, KPI dashboards, and operational insights.
   </Card>
-  <Card title="Project Management" icon="list-check" href="/integrations/communication-tools">
+  <Card title="Project Management" icon="list-check" href="/concepts/tools-integrations">
     Sync tasks, milestones, and blockers from Jira, Asana, and Linear. Progress Pilot tracks delivery health and surfaces cross-team dependencies automatically.
   </Card>
 </CardGroup>
@@ -64,7 +64,7 @@ In addition to the Settings UI, you can manage integrations programmatically usi
 **List all connected integrations for a workspace:**
 
 ```http
-GET /api/v1/integrations
+GET https://api.progresspilot.ai/v1/integrations
 Authorization: Bearer <your_api_token>
 ```
 
@@ -94,7 +94,7 @@ Authorization: Bearer <your_api_token>
 **Initiate a new integration connection:**
 
 ```http
-POST /api/v1/integrations/connect
+POST https://api.progresspilot.ai/v1/integrations/connect
 Authorization: Bearer <your_api_token>
 Content-Type: application/json
 
@@ -114,11 +114,4 @@ Content-Type: application/json
 
 Redirect the user to the returned `authorization_url` to complete the OAuth consent flow. The `state` parameter is a CSRF token that Progress Pilot validates when the user is redirected back to your `redirect_uri`.
 
-**Disconnect an integration:**
-
-```http
-DELETE /api/v1/integrations/{integration_id}
-Authorization: Bearer <your_api_token>
-```
-
-A `204 No Content` response confirms the integration has been disconnected and all associated credentials have been purged.
+To disconnect an integration, navigate to **Settings → Integrations** in the Progress Pilot dashboard, find the connected integration, and click **Disconnect**. All associated credentials are immediately purged and the OAuth grant is revoked.

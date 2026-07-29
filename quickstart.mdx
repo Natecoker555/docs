@@ -76,7 +76,7 @@ Progress Pilot gets you from signup to your first AI-powered operation in minute
     **Option B — API (cURL)**
 
     ```bash
-    curl -X POST https://api.progresspilot.ai/v1/agents/run \
+    curl -X POST https://api.progresspilot.ai/api/v1/agents/run \
       -H "Authorization: Bearer ppk_live_your_api_key" \
       -H "Content-Type: application/json" \
       -d '{
@@ -95,11 +95,11 @@ Progress Pilot gets you from signup to your first AI-powered operation in minute
       "task_id": "task_xyz789",
       "status": "processing",
       "estimated_completion": "30s",
-      "result_webhook": "https://api.progresspilot.ai/v1/tasks/task_xyz789"
+      "result_url": "https://api.progresspilot.ai/api/v1/tasks/task_xyz789"
     }
     ```
 
-    Poll the `result_webhook` URL with your API key to retrieve the completed summary, or configure a webhook endpoint in **Settings → Webhooks** to receive results automatically when they are ready.
+    Poll the `result_url` with your API key to retrieve the completed summary, or configure a webhook endpoint in **Settings → Webhooks** to receive results automatically when they are ready.
 
     <Tip>
       Use the `output_format` field to control detail level. Accepted values are `brief`, `detailed`, and `executive`. The `executive` format produces a concise three-bullet summary optimized for leadership audiences.

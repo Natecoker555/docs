@@ -90,16 +90,12 @@ Progress Pilot tracks the completion rate for action items over time and surface
 
 ## API Access
 
-Retrieve action items for a specific meeting programmatically using the following endpoint:
+Action items extracted from meetings are available as tasks through the Progress Pilot REST API. Use `GET /v1/tasks` to list all tasks across meetings, and `PATCH /v1/tasks/{id}` to update a task's status programmatically.
 
-```http
-GET /api/v1/meetings/{id}/action-items
-```
-
-**Request example:**
+**List tasks:**
 
 ```bash
-curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/action-items" \
+curl -X GET "https://api.progresspilot.ai/v1/tasks" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json"
 ```
@@ -108,8 +104,7 @@ curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/action-ite
 
 ```json
 {
-  "meeting_id": "meet_abc123",
-  "action_items": [
+  "tasks": [
     {
       "id": "ai_001",
       "task": "Send updated Q3 roadmap draft",
@@ -117,7 +112,7 @@ curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/action-ite
       "due_date": "2024-10-17",
       "status": "open",
       "source_quote": "I'll send the updated draft by Thursday.",
-      "timestamp": "10:03:00",
+      "meeting_id": "meet_abc123",
       "routed_to": {
         "integration": "jira",
         "issue_id": "ENG-4421",
@@ -131,14 +126,23 @@ curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/action-ite
       "due_date": "2024-10-18",
       "status": "open",
       "source_quote": "Let's align with design before the all-hands.",
-      "timestamp": "10:04:00",
+      "meeting_id": "meet_abc123",
       "routed_to": null
     }
   ]
 }
 ```
 
-You can also update the status of an action item via the API using `PATCH /api/v1/tasks/{id}`. For the full list of action item endpoints and request schemas, see the [API Reference](/api-reference/tasks).
+**Update a task's status:**
+
+```bash
+curl -X PATCH "https://api.progresspilot.ai/v1/tasks/ai_001" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "complete"}'
+```
+
+For the full list of task endpoints and request schemas, see the [API Reference](/api-reference/tasks).
 
 ---
 

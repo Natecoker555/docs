@@ -1,5 +1,5 @@
 ---
-title: "Track and Align Strategic Operational Priorities"
+title: "Track and Align Your Organization's Strategic Priorities"
 sidebarTitle: "Strategic Priorities"
 description: "Use Progress Pilot to define OKRs, track progress, surface blockers, and keep every team aligned with your organization's strategic goals."
 ---
@@ -21,50 +21,33 @@ All priority types support team assignments, target dates, and metric definition
 
 ## Creating a Priority
 
-You can create priorities from the dashboard or by posting to the `/v1/priorities` API endpoint. The following payload creates an OKR targeting a 20% reduction in average meeting duration across three teams:
-
-```json
-{
-  "title": "Reduce average meeting time by 20% in Q3",
-  "type": "okr",
-  "owner": "ops-team",
-  "target_date": "2024-09-30",
-  "metrics": [
-    {
-      "name": "Avg meeting duration",
-      "baseline": 52,
-      "target": 42,
-      "unit": "minutes"
-    }
-  ],
-  "teams": ["engineering", "product", "design"]
-}
-```
-
-The `baseline` value anchors the starting point for progress calculation. Progress Pilot computes percentage completion as the proportional movement from `baseline` toward `target` based on current observed values from connected data sources.
-
-To create this priority via the API:
+You can create priorities from the **Priorities** dashboard or by triggering the `create_priority` task via the agent API. The following example creates an OKR targeting a 20% reduction in average meeting duration across three teams:
 
 ```bash
-curl -X POST https://api.progresspilot.ai/v1/priorities \
+curl -X POST https://api.progresspilot.ai/v1/agents/run \
   -H "Authorization: Bearer ppk_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Reduce average meeting time by 20% in Q3",
-    "type": "okr",
-    "owner": "ops-team",
-    "target_date": "2024-09-30",
-    "metrics": [
-      {
-        "name": "Avg meeting duration",
-        "baseline": 52,
-        "target": 42,
-        "unit": "minutes"
-      }
-    ],
-    "teams": ["engineering", "product", "design"]
+    "task": "create_priority",
+    "context": {
+      "title": "Reduce average meeting time by 20% in Q3",
+      "type": "okr",
+      "owner": "ops-team",
+      "target_date": "2024-09-30",
+      "metrics": [
+        {
+          "name": "Avg meeting duration",
+          "baseline": 52,
+          "target": 42,
+          "unit": "minutes"
+        }
+      ],
+      "teams": ["engineering", "product", "design"]
+    }
   }'
 ```
+
+The `baseline` value anchors the starting point for progress calculation. Progress Pilot computes percentage completion as the proportional movement from `baseline` toward `target` based on current observed values from connected data sources.
 
 ## Automatic Progress Monitoring
 
@@ -82,7 +65,7 @@ Once a priority is created, Progress Pilot monitors it continuously without requ
   </Card>
 </CardGroup>
 
-Progress is recalculated every 24 hours and visualized as a trend line on each priority's detail page. You can also trigger an on-demand recalculation from the dashboard or via `POST /v1/priorities/{id}/refresh`.
+Progress is recalculated every 24 hours and visualized as a trend line on each priority's detail page. You can also trigger an on-demand recalculation at any time by clicking **Refresh Progress** on the priority's detail page in the dashboard.
 
 ## Blocker Detection
 
@@ -114,7 +97,7 @@ You can configure digest recipients, delivery channel (email or Slack), and deli
 
 Org-level strategic goals only create value when they are translated into team-level actions. Progress Pilot supports a cascading hierarchy that connects executive priorities to team execution:
 
-```
+```text
 Org OKR: Improve operational efficiency by 25% in FY2025
   └── Team OKR (Engineering): Reduce deployment cycle time by 30% in Q3
         └── Initiative: Implement CI/CD pipeline improvements

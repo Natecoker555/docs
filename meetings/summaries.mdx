@@ -105,13 +105,13 @@ You can combine any number of these channels. For example, a common configuratio
 Every meeting summary is available through the Progress Pilot REST API. Use the following endpoint to retrieve a summary programmatically:
 
 ```http
-GET /api/v1/meetings/{id}/summary
+GET /v1/meetings/{id}/summary
 ```
 
 **Request example:**
 
 ```bash
-curl -X GET "https://api.progresspilot.ai/api/v1/meetings/meet_abc123/summary" \
+curl -X GET "https://api.progresspilot.ai/v1/meetings/meet_abc123/summary" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json"
 ```

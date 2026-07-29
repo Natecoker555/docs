@@ -1,7 +1,7 @@
 ---
-title: "REST API Endpoints for Meeting Intelligence"
+title: "Meetings API — Sessions, Transcripts, and Summaries"
 sidebarTitle: "Meetings"
-description: "Manage meeting sessions, retrieve transcripts and summaries, and list action items via the Progress Pilot meetings API endpoints."
+description: "Start and monitor meeting sessions, retrieve transcripts and AI-generated summaries, and extract action items using the Progress Pilot Meetings API."
 ---
 
 The Meetings API is your interface to Progress Pilot's meeting intelligence layer. You can use it to programmatically start a monitored meeting session across Google Meet, Zoom, or Microsoft Teams; retrieve the raw transcript once the meeting ends; access a structured AI-generated summary; and extract the action items that were committed to during the call. All meeting data is retained according to your plan's data retention policy and accessible immediately after the meeting session closes.
@@ -332,4 +332,53 @@ Returns a paginated list of all meeting sessions for your account.
 ```bash
 curl "https://api.progresspilot.ai/v1/meetings?status=completed&from=2024-10-01T00:00:00Z&to=2024-10-31T23:59:59Z&page=1&per_page=20" \
   -H "Authorization: Bearer ppk_live_your_api_key"
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "meeting_id": "meet_abc123",
+      "title": "Q4 Planning Kickoff",
+      "platform": "google_meet",
+      "status": "completed",
+      "participants": [
+        { "name": "Sarah Chen", "email": "sarah.chen@company.com" },
+        { "name": "James Park", "email": "james.park@company.com" }
+      ],
+      "started_at": "2024-10-15T10:00:00Z",
+      "ended_at": "2024-10-15T11:02:00Z",
+      "duration_seconds": 3720,
+      "transcript_available": true,
+      "summary_available": true
+    },
+    {
+      "meeting_id": "meet_def456",
+      "title": "Engineering Retrospective",
+      "platform": "zoom",
+      "status": "completed",
+      "participants": [
+        { "name": "Priya Nair", "email": "priya.nair@company.com" }
+      ],
+      "started_at": "2024-10-14T14:00:00Z",
+      "ended_at": "2024-10-14T14:45:00Z",
+      "duration_seconds": 2700,
+      "transcript_available": true,
+      "summary_available": true
+    }
+  ],
+  "meta": {
+    "request_id": "req_mno789",
+    "timestamp": "2024-10-15T11:00:00Z",
+    "pagination": {
+      "page": 1,
+      "per_page": 20,
+      "total": 2,
+      "total_pages": 1
+    }
+  }
+}
 ```

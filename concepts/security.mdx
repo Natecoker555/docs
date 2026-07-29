@@ -1,7 +1,7 @@
 ---
 title: "Security Architecture and Controls in Progress Pilot"
 sidebarTitle: "Security"
-description: "Understand Progress Pilot's security model, including data encryption, access controls, authentication methods, audit logging, and compliance certifications."
+description: "Understand Progress Pilot's security model: data encryption, access controls, authentication methods, audit logging, and compliance certifications."
 ---
 
 Security is not an afterthought in Progress Pilot — it is a foundational design principle that shapes every layer of the platform, from how credentials are stored to how the agent logs every action it takes. Because Progress Pilot connects to your most sensitive operational systems — calendars, project trackers, databases, and communication channels — the platform is built to the standard that enterprise security teams require: strong encryption, granular access controls, comprehensive audit trails, and formal compliance certifications. This page gives you a complete picture of the security architecture and tells you exactly what controls are available at each plan tier.
@@ -12,7 +12,7 @@ Progress Pilot supports multiple authentication methods to match your organizati
 
 <Tabs>
   <Tab title="API Keys">
-    API keys are used for programmatic access to the Progress Pilot API — for example, triggering agent tasks from your CI/CD pipeline or registering custom tools. Each key is:
+    API keys are used for programmatic access to the Progress Pilot API — for example, triggering agent tasks from your own applications or registering custom tools. Each key is:
 
     - Scoped to a single workspace
     - Assigned to a role at creation time (the key inherits that role's permissions)

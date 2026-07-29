@@ -1,7 +1,7 @@
 ---
-title: "Modernized Reporting with AI-Generated Insights"
+title: "Automated Operational Reporting with AI-Generated Insights"
 sidebarTitle: "Reporting"
-description: "Generate rich operational reports automatically with Progress Pilot — from weekly status digests to cross-team performance dashboards, delivered on your schedule."
+description: "Generate rich operational reports automatically with Progress Pilot — from weekly status digests to performance dashboards, delivered on your schedule."
 ---
 
 Progress Pilot transforms operational reporting from a manual, time-consuming chore into an automated intelligence layer. Instead of assembling status updates from a dozen sources every Friday afternoon, the agent pulls data from your connected integrations, analyzes trends and anomalies, and delivers polished, insight-rich reports to the right people at the right time — in whatever format your organization already uses.
@@ -83,45 +83,20 @@ Progress Pilot supports multiple delivery formats. Specify your preferred format
 
 ## Scheduling Reports
 
-Automate report delivery by configuring a schedule in **Settings → Scheduled Reports** or via the `/v1/reports/schedules` API endpoint.
+Automate report delivery by configuring a schedule in **Settings → Scheduled Reports**. To generate a report immediately on demand, use the `POST /v1/reports/generate` endpoint at any time.
 
-<Tabs>
-  <Tab title="Dashboard">
-    Navigate to **Reports → Schedules → New Schedule**. Select the report type, scope, period, format, and delivery channels. Then choose a frequency:
+Navigate to **Reports → Schedules → New Schedule**. Select the report type, scope, period, format, and delivery channels. Then choose a frequency:
 
-    - **Daily** — runs at a time you specify in your workspace timezone
-    - **Weekly** — runs on a selected day of the week
-    - **Monthly** — runs on a selected date (1–28) each month
-    - **Custom Cron** — enter a cron expression for precise scheduling, e.g., `0 7 * * 1` for every Monday at 7:00 AM
+- **Daily** — runs at a time you specify in your workspace timezone
+- **Weekly** — runs on a selected day of the week
+- **Monthly** — runs on a selected date (1–28) each month
+- **Custom Cron** — enter a cron expression for precise scheduling, e.g., `0 7 * * 1` for every Monday at 7:00 AM
 
-    Schedules activate immediately upon saving. The next scheduled run is shown on the schedule card.
-  </Tab>
-  <Tab title="API">
-    Create a schedule programmatically using the schedules endpoint:
+Schedules activate immediately upon saving. The next scheduled run is shown on the schedule card.
 
-    ```bash
-    curl -X POST https://api.progresspilot.ai/v1/reports/schedules \
-      -H "Authorization: Bearer ppk_live_your_api_key" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "report_type": "team_performance",
-        "scope": "product",
-        "period": "last_7_days",
-        "format": "pdf",
-        "schedule": {
-          "frequency": "weekly",
-          "day_of_week": "monday",
-          "time": "07:00",
-          "timezone": "America/New_York"
-        },
-        "delivery": {
-          "channels": ["email"],
-          "recipients": ["vp-product@company.com", "cto@company.com"]
-        }
-      }'
-    ```
-  </Tab>
-</Tabs>
+<Tip>
+  To recreate a scheduled report's output on demand — for example, to share the latest data before a board meeting — call `POST /v1/reports/generate` with the same `report_type`, `scope`, and `period` parameters your schedule uses. The report generates immediately and can be delivered to any channel you specify.
+</Tip>
 
 ## Report Templates
 

@@ -1,5 +1,5 @@
 ---
-title: "Configure Your Progress Pilot Workspace"
+title: "Progress Pilot Workspace Setup: Teams, Roles, and Security"
 sidebarTitle: "Workspace Setup"
 description: "Set up your Progress Pilot organization, invite team members, configure roles, and prepare your workspace for AI-powered operations."
 ---
@@ -23,13 +23,7 @@ Your organization workspace is the shared environment where all agent tasks, int
   <Step title="Create the Organization Workspace">
     If you signed up through [app.progresspilot.ai](https://app.progresspilot.ai) and completed the initial onboarding, your workspace already exists. To create an additional organization (for example, a sandbox environment), click your **organization switcher** in the top-left corner of the dashboard and select **Create New Organization**.
 
-    Choose a workspace slug carefully — this value is embedded in every API call your team makes:
-
-    ```
-    https://api.progresspilot.ai/v1/org/{workspace_slug}/agents/run
-    ```
-
-    Slugs must be lowercase, alphanumeric, and may contain hyphens. Spaces and special characters are not permitted.
+    Choose a workspace slug carefully — it identifies your organization across the dashboard and in notification emails. Slugs must be lowercase, alphanumeric, and may contain hyphens. Spaces and special characters are not permitted.
   </Step>
 
   <Step title="Set Workspace Preferences">

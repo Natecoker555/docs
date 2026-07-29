@@ -1,5 +1,5 @@
 ---
-title: "Run Your First AI Agent Task with Progress Pilot"
+title: "How to Run Your First AI Agent Task in Progress Pilot"
 sidebarTitle: "First Agent Task"
 description: "Create and run your first Progress Pilot AI agent task, from choosing a task type to reviewing results and routing outputs to your team."
 ---
@@ -35,7 +35,7 @@ Every Progress Pilot task can be triggered in three ways. Choose the approach th
     The example below triggers a meeting summary task:
 
     ```bash
-    curl -X POST https://api.progresspilot.ai/v1/agents/run \
+    curl -X POST https://api.progresspilot.ai/api/v1/agents/run \
       -H "Authorization: Bearer ppk_live_your_api_key" \
       -H "Content-Type: application/json" \
       -d '{
@@ -54,14 +54,14 @@ Every Progress Pilot task can be triggered in three ways. Choose the approach th
       "task_id": "task_xyz789",
       "status": "processing",
       "estimated_completion": "30s",
-      "result_webhook": "https://api.progresspilot.ai/v1/tasks/task_xyz789"
+      "result_url": "https://api.progresspilot.ai/api/v1/tasks/task_xyz789"
     }
     ```
 
-    Poll the `result_webhook` URL to check for completion:
+    Poll the `result_url` to check for completion:
 
     ```bash
-    curl -X GET https://api.progresspilot.ai/v1/tasks/task_xyz789 \
+    curl -X GET https://api.progresspilot.ai/api/v1/tasks/task_xyz789 \
       -H "Authorization: Bearer ppk_live_your_api_key"
     ```
 
@@ -73,37 +73,27 @@ Every Progress Pilot task can be triggered in three ways. Choose the approach th
   </Tab>
 
   <Tab title="Scheduled">
-    Scheduled triggers allow you to run any agent task on a recurring cadence without manual intervention. Define a schedule via the API using a cron expression.
+    Scheduled triggers let you run any agent task on a recurring cadence without manual intervention. You configure schedules from the Progress Pilot dashboard — no extra API calls required.
 
-    The example below schedules a `generate_report` task to run every Monday at 8:00 AM UTC:
+    1. Go to **Agent Tasks** in the left sidebar and click **New Task**.
+    2. Configure your task type and context as you would for a one-off run (see the **Dashboard** tab above).
+    3. Toggle **Run on a Schedule** before clicking **Run Task**.
+    4. Set your recurrence — choose a preset cadence (daily, weekly, monthly) or enter a custom cron expression.
+    5. Select your **Time Zone** from the dropdown. Scheduled tasks default to your workspace time zone set in **Settings → Preferences**.
+    6. Configure **Output Routing** to deliver results automatically to a Slack channel, email addresses, or a Jira project when each run completes.
+    7. Click **Save Schedule**. The schedule appears in **Settings → Scheduled Tasks**, where you can pause, edit, or delete it at any time.
 
-    ```bash
-    curl -X POST https://api.progresspilot.ai/v1/schedules \
-      -H "Authorization: Bearer ppk_live_your_api_key" \
-      -H "Content-Type: application/json" \
-      -d '{
-        "name": "Weekly Ops Report",
-        "task": "generate_report",
-        "context": {
-          "report_type": "weekly_ops",
-          "output_format": "executive",
-          "teams": ["engineering", "product", "design"]
-        },
-        "schedule": {
-          "cron": "0 8 * * 1",
-          "timezone": "UTC"
-        },
-        "routing": {
-          "slack_channel": "#ops-reports",
-          "email": ["ops-lead@acme.com"]
-        }
-      }'
-    ```
+    The example below shows what a weekly ops report schedule looks like once configured:
 
-    The API returns a schedule object with a unique `schedule_id`. You can view, pause, or delete all active schedules in **Settings → Scheduled Tasks** or via the `/v1/schedules` endpoint.
+    | Field | Value |
+    |---|---|
+    | Task Type | `generate_report` |
+    | Cadence | Every Monday at 8:00 AM |
+    | Time Zone | America/New_York |
+    | Output Routing | `#ops-reports` Slack channel + `ops-lead@acme.com` |
 
     <Note>
-      Scheduled tasks use your workspace's default time zone unless you explicitly specify a `timezone` in the schedule object. Accepted values follow the IANA time zone database format (e.g., `America/New_York`, `Europe/London`).
+      Scheduled tasks use your workspace's default time zone unless you choose a different zone during schedule setup. Accepted values follow the IANA time zone database format (e.g., `America/New_York`, `Europe/London`).
     </Note>
   </Tab>
 </Tabs>
@@ -155,7 +145,7 @@ If you configured a webhook endpoint, Progress Pilot sends an HTTP `POST` reques
 
 **API Poll**
 
-Send a `GET` request to the task's `result_webhook` URL using your API key at any time after task creation to retrieve the current status and, once complete, the full result payload.
+Send a `GET` request to `https://api.progresspilot.ai/api/v1/tasks/{task_id}` using your API key at any time after task creation to retrieve the current status and, once complete, the full result payload.
 
 ## Routing Output to Your Team
 
